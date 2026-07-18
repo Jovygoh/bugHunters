@@ -264,6 +264,7 @@ document.addEventListener('DOMContentLoaded', () => {
     bindEvents();
     bindTooltip();
     startSimulation();
+    autoDetectClientIP();
     addLog("BugHunters detection engine started. Monitoring file upload channels for all AI tools.", "system");
     addLog("7 approved AI tools whitelisted. Unknown tools will trigger an alert.", "system");
 });
@@ -279,8 +280,6 @@ function bindEvents() {
         else { stopSimulation(); addLog("Live simulation paused.", "system"); }
     });
     dom.btnReset.addEventListener('click', resetDashboard);
-    const btnTrigger = $('btn-trigger-backend');
-    if (btnTrigger) btnTrigger.addEventListener('click', triggerLiveBackendScan);
     dom.btnCloseModal.addEventListener('click', closeModal);
     dom.btnDismiss.addEventListener('click', handleDismiss);
     dom.btnWarn.addEventListener('click', handleWarn);
@@ -772,50 +771,52 @@ function resetDashboard() {
     updateCounters();
 }
 
-async function triggerLiveBackendScan() {
-    addLog(`Sending live API request to Render Backend (${API_BASE_URL})...`, "system");
+// ─────────────────────────────────────────────────────────────────────
+// AUTO ENDPOINT IP DETECTION & MONITORING SERVICE
+// ─────────────────────────────────────────────────────────────────────
+// Set ENABLE_AUTO_IP_MONITOR = false to disable after testing.
+// Set MY_TEST_IP = '192.168.1.X' to manually specify a test IP address.
+const ENABLE_AUTO_IP_MONITOR = true;
+let MY_TEST_IP = null; // Auto-detects endpoint IP if null
+
+async function autoDetectClientIP() {
+    if (!ENABLE_AUTO_IP_MONITOR) return;
     try {
-        const payload = {
-            tool_name: "ChatPDF_Custom.ai",
-            file_name: "confidential_quarterly_financials_2026.xlsx",
-            detected_at: new Date().toISOString()
-        };
-        await fetch(`${API_BASE_URL}/discovery/unknown-tools`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-
-        const newDetection = {
-            id: 'backend-' + Date.now(),
-            name: "Live API Test Worker",
-            dept: "Finance",
-            tool: "ChatPDF_Custom.ai",
-            toolApproved: false,
-            file: "confidential_quarterly_financials_2026.xlsx",
-            uploadStatus: "Blocked — Confidential",
-            riskLevel: "high",
-            riskScore: 98,
-            ip: "10.0.99.1",
-            date: nowTimestamp(),
-            fileType: "Spreadsheet (.xlsx)",
-            dataFound: ["Render Backend Scan: Confidential Financial Data Detected"]
-        };
-
-        workers.unshift(newDetection);
-        totalBlocked++;
-        if (departments["Finance"]) {
-            departments["Finance"].blocked++;
-            departments["Finance"].alerts++;
-            departments["Finance"].risk = "High Risk";
-            departments["Finance"].riskClass = "badge-danger";
+        if (!MY_TEST_IP) {
+            const res = await fetch('https://api.ipify.org?format=json');
+            if (res.ok) {
+                const data = await res.json();
+                MY_TEST_IP = data.ip;
+            }
         }
+        if (!MY_TEST_IP) MY_TEST_IP = '10.0.12.99';
 
-        addLog(`[LIVE BACKEND RESPONSE] Render API evaluated upload. Intercepted confidential file on ChatPDF_Custom.ai!`, "threat");
+        // Connect local workstation IP to monitoring table
+        const myWorker = workers.find(w => w.name === "Connected Device" || w.ip === MY_TEST_IP);
+        if (myWorker) {
+            myWorker.ip = MY_TEST_IP;
+            myWorker.date = nowTimestamp();
+        } else {
+            workers.unshift({
+                id: 'endpoint-' + Date.now(),
+                name: "Connected Device",
+                dept: "Engineering",
+                tool: "GitHub Copilot",
+                toolApproved: true,
+                file: "active_session_telemetry.sys",
+                uploadStatus: "Allowed",
+                riskLevel: "low",
+                riskScore: 6,
+                ip: MY_TEST_IP,
+                date: nowTimestamp(),
+                fileType: "Active Endpoint",
+                dataFound: ["Endpoint active — real-time telemetry streaming"]
+            });
+        }
+        addLog(`Workstation connected (IP: ${MY_TEST_IP}). Real-time telemetry engaged.`, "system");
         renderTable();
         updateCounters();
-        alert("✅ Live Backend Scan Triggered!\nRender API received POST request, evaluated security policy, and recorded threat into Backend database.");
     } catch (e) {
-        addLog(`Backend scan initiated via API endpoint.`, "system");
+        // Silently fallback if offline
     }
 }
