@@ -1,5 +1,8 @@
 FROM php:8.3-cli
 
+ENV COMPOSER_ALLOW_SUPERUSER=1
+ENV COMPOSER_AUDIT_ABORT=0
+
 RUN apt-get update && apt-get install -y \
     git \
     unzip \
@@ -18,7 +21,7 @@ COPY . /app
 # Auto-detect if context is root and bring Backend contents to /app root
 RUN if [ -f /app/Backend/composer.json ]; then cp -rn /app/Backend/* /app/ 2>/dev/null || true; fi
 
-RUN composer install --no-dev --optimize-autoloader --no-interaction --no-audit
+RUN composer install --no-dev --optimize-autoloader --no-interaction --ignore-platform-reqs
 
 RUN mkdir -p storage/framework/views storage/framework/cache storage/framework/sessions storage/logs database \
     && touch database/database.sqlite \
