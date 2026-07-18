@@ -17,6 +17,9 @@ WORKDIR /app
 
 COPY . /app
 
+# Auto-detect if context is root and bring Backend contents to /app root
+RUN if [ -f /app/Backend/composer.json ]; then cp -rn /app/Backend/* /app/ 2>/dev/null || true; fi
+
 RUN composer install --no-dev --optimize-autoloader --no-interaction
 
 RUN mkdir -p storage/framework/views storage/framework/cache storage/framework/sessions storage/logs database \
