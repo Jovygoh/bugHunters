@@ -23,9 +23,9 @@ RUN if [ -f /app/Backend/composer.json ]; then cp -rn /app/Backend/* /app/ 2>/de
 
 RUN composer install --no-dev --optimize-autoloader --no-interaction --no-security-blocking --ignore-platform-reqs
 
-RUN mkdir -p storage/framework/views storage/framework/cache storage/framework/sessions storage/logs database \
+RUN mkdir -p storage/framework/views storage/framework/cache storage/framework/sessions storage/logs bootstrap/cache database \
     && touch database/database.sqlite \
-    && chmod -R 777 storage database
+    && chmod -R 777 storage bootstrap/cache database
 
 EXPOSE 10000
 
