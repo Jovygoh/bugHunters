@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\V1\Auth\AuthController;
 use App\Http\Controllers\Api\V1\Employees\EmployeeController;
 use App\Http\Controllers\Api\V1\Departments\DepartmentController;
+use App\Http\Controllers\Api\V1\Devices\DeviceController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1/auth')->name('api.v1.auth.')->group(function (): void {
@@ -24,4 +25,12 @@ Route::prefix('v1')
             ->whereUuid('employee');
         Route::apiResource('departments', DepartmentController::class)
             ->whereUuid('department');
+        Route::post('devices/{device}/heartbeat', [DeviceController::class, 'heartbeat'])
+            ->whereUuid('device')
+            ->name('devices.heartbeat');
+        Route::post('devices/{device}/verify', [DeviceController::class, 'verify'])
+            ->whereUuid('device')
+            ->name('devices.verify');
+        Route::apiResource('devices', DeviceController::class)
+            ->whereUuid('device');
     });
