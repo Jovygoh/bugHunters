@@ -1,0 +1,16 @@
+<?php
+
+namespace App\Domain\Employees\Repositories;
+
+use App\Domain\Shared\Repositories\RepositoryInterface;
+use App\Models\Employee;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+
+/** @extends RepositoryInterface<Employee> */
+interface EmployeeRepositoryInterface extends RepositoryInterface
+{
+    public function findByEmployeeNumber(string $organizationId, string $employeeNumber): ?Employee;
+
+    public function paginateByDepartment(string $organizationId, string $departmentId, int $perPage = 25): LengthAwarePaginator;
+}
+
