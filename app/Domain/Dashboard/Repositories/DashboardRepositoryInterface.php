@@ -18,5 +18,12 @@ interface DashboardRepositoryInterface
     public function incidentStatus(string $organizationId, string $metricDate): Collection;
 
     public function policyCompliance(string $organizationId, string $metricDate): Collection;
-}
 
+    public function operationalSummary(string $organizationId, string $activeSince): array;
+
+    public function monthlyStatistics(string $organizationId, string $from, string $to): array;
+
+    public function incidentTrends(string $organizationId, string $from, string $to, string $interval): array;
+
+    public function topViolations(string $organizationId, string $from, string $to, int $limit): array;
+}

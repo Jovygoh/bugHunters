@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\V1\Policies\PolicyController;
 use App\Http\Controllers\Api\V1\Policies\PolicyEvaluationController;
 use App\Http\Controllers\Api\V1\Incidents\IncidentController;
 use App\Http\Controllers\Api\V1\Notifications\NotificationController;
+use App\Http\Controllers\Api\V1\Dashboard\DashboardController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1/auth')->name('api.v1.auth.')->group(function (): void {
@@ -82,4 +83,10 @@ Route::prefix('v1')
             ->name('notifications.read');
         Route::put('notification-preferences', [NotificationController::class, 'updatePreference'])
             ->name('notification-preferences.update');
+        Route::prefix('dashboard')->name('dashboard.')->group(function (): void {
+            Route::get('summary', [DashboardController::class, 'summary'])->name('summary');
+            Route::get('monthly-statistics', [DashboardController::class, 'monthlyStatistics'])->name('monthly-statistics');
+            Route::get('incident-trends', [DashboardController::class, 'incidentTrends'])->name('incident-trends');
+            Route::get('top-violations', [DashboardController::class, 'topViolations'])->name('top-violations');
+        });
     });
