@@ -11,5 +11,6 @@ interface UserRepositoryInterface extends RepositoryInterface
     public function findByEmail(string $organizationId, string $normalizedEmail): ?User;
 
     public function findActiveById(string $id): ?User;
-}
 
+    public function findActiveWithRoles(string $id): ?User;
+}

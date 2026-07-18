@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Domain\AiTools\Repositories\AiToolRepositoryInterface;
 use App\Domain\Audit\Repositories\AuditLogRepositoryInterface;
 use App\Domain\Authentication\Repositories\UserRepositoryInterface;
+use App\Domain\Authentication\Repositories\AuthTokenRepositoryInterface;
 use App\Domain\Dashboard\Repositories\DashboardRepositoryInterface;
 use App\Domain\DataClassification\Repositories\DataClassificationRepositoryInterface;
 use App\Domain\Departments\Repositories\DepartmentRepositoryInterface;
@@ -28,12 +29,16 @@ use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentNotificationRep
 use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentOrganizationRepository;
 use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentPolicyRepository;
 use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentUserRepository;
+use App\Infrastructure\Persistence\Eloquent\Repositories\EloquentAuthTokenRepository;
+use App\Models\PersonalAccessToken;
 use Illuminate\Support\ServiceProvider;
+use Laravel\Sanctum\Sanctum;
 
 final class RepositoryServiceProvider extends ServiceProvider
 {
     /** @var array<class-string, class-string> */
     public $bindings = [
+        AuthTokenRepositoryInterface::class => EloquentAuthTokenRepository::class,
         UserRepositoryInterface::class => EloquentUserRepository::class,
         OrganizationRepositoryInterface::class => EloquentOrganizationRepository::class,
         EmployeeRepositoryInterface::class => EloquentEmployeeRepository::class,
@@ -48,5 +53,9 @@ final class RepositoryServiceProvider extends ServiceProvider
         DashboardRepositoryInterface::class => EloquentDashboardRepository::class,
         AuditLogRepositoryInterface::class => EloquentAuditLogRepository::class,
     ];
-}
 
+    public function boot(): void
+    {
+        Sanctum::usePersonalAccessTokenModel(PersonalAccessToken::class);
+    }
+}

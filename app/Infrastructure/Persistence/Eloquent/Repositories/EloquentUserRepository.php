@@ -11,7 +11,11 @@ final class EloquentUserRepository extends AbstractEloquentRepository implements
 
     public function findByEmail(string $organizationId, string $normalizedEmail): ?User
     {
-        return User::query()->where('organization_id', $organizationId)->where('normalized_email', $normalizedEmail)->first();
+        return User::query()
+            ->with('roles')
+            ->where('organization_id', $organizationId)
+            ->where('normalized_email', $normalizedEmail)
+            ->first();
     }
 
     public function findActiveById(string $id): ?User
@@ -19,6 +23,14 @@ final class EloquentUserRepository extends AbstractEloquentRepository implements
         return User::query()->whereKey($id)->where('status', 'active')->first();
     }
 
+    public function findActiveWithRoles(string $id): ?User
+    {
+        return User::query()
+            ->with(['roles', 'employee.department'])
+            ->whereKey($id)
+            ->where('status', 'active')
+            ->first();
+    }
+
     protected function filterable(): array { return ['organization_id', 'status', 'normalized_email']; }
 }
-
