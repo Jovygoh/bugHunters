@@ -106,53 +106,6 @@
                 </div>
             </div>
 
-            <!-- Live Endpoint Scanner Dropzone Card -->
-            <div class="glass-card" style="margin-bottom: 24px; padding: 20px; border: 1px solid rgba(0, 240, 255, 0.3); background: rgba(6, 9, 14, 0.85); border-radius: 14px;">
-                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
-                    <div style="display:flex; align-items:center; gap:10px;">
-                        <i data-lucide="shield-search" style="color:#00f0ff; width:22px; height:22px;"></i>
-                        <h2 style="font-size:1.1rem; font-weight:700; color:#fff;">Live Endpoint Scanner — Intercept PC File Uploads</h2>
-                    </div>
-                    <span class="badge badge-success" id="user-ip-badge" style="font-family:var(--mono);">Your Workstation IP: Detecting...</span>
-                </div>
-
-                <div style="display:grid; grid-template-columns: 1fr 2fr; gap:20px; align-items:center;">
-                    <!-- Left: AI Tool Selector -->
-                    <div>
-                        <label style="font-size:0.78rem; color:var(--muted); font-weight:600; display:block; margin-bottom:6px;">SELECT AI APPLICATION / WEBSITE</label>
-                        <select id="live-scan-tool" style="width:100%; background:#06090e; border:1px solid var(--border); padding:10px 14px; border-radius:8px; color:var(--text); font-size:0.85rem;">
-                            <option value="Phind.com|unapproved">Phind.com (Unapproved Shadow AI)</option>
-                            <option value="ChatPDF.com|unapproved">ChatPDF.com (Unapproved Shadow AI)</option>
-                            <option value="Writesonic.com|unapproved">Writesonic.com (Unapproved Shadow AI)</option>
-                            <option value="PromptBase.com|unapproved">PromptBase.com (Unapproved Shadow AI)</option>
-                            <option value="ChatGPT Enterprise|approved">ChatGPT Enterprise (Whitelisted Approved AI)</option>
-                            <option value="GitHub Copilot|approved">GitHub Copilot (Whitelisted Approved AI)</option>
-                        </select>
-                    </div>
-
-                    <!-- Right: File Dropzone -->
-                    <div>
-                        <label style="font-size:0.78rem; color:var(--muted); font-weight:600; display:block; margin-bottom:6px;">SELECT ANY FILE FROM YOUR COMPUTER TO TEST REAL-TIME PRE-UPLOAD INTERCEPTION</label>
-                        <div id="file-dropzone" style="border: 2px dashed rgba(0, 240, 255, 0.4); border-radius: 10px; padding: 14px; text-align: center; cursor: pointer; background: rgba(0, 240, 255, 0.03); transition: all 0.2s ease;">
-                            <input type="file" id="file-scanner-input" style="display: none;">
-                            <div style="display:flex; align-items:center; justify-content:center; gap:10px;">
-                                <i data-lucide="file-up" style="color:#00f0ff; width:20px; height:20px;"></i>
-                                <span id="dropzone-text" style="font-size:0.85rem; color:var(--text); font-weight:600;">📁 Click here or drop any file from your PC to test live scan</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Live Scan Result Output Banner -->
-                <div id="live-scan-output" class="hidden" style="margin-top:16px; padding:14px; border-radius:10px; display:flex; align-items:center; gap:14px;">
-                    <i id="scan-output-icon" data-lucide="shield-alert" style="width:28px; height:28px; flex-shrink:0;"></i>
-                    <div>
-                        <h4 id="scan-output-title" style="font-size:0.95rem; font-weight:700; color:#fff;">-</h4>
-                        <p id="scan-output-desc" style="font-size:0.8rem; color:var(--muted); margin-top:2px;">-</p>
-                    </div>
-                </div>
-            </div>
-
             <!-- Metric Counters -->
             <section class="metrics-grid">
                 <div class="metric-card">
