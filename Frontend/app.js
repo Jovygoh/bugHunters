@@ -285,6 +285,35 @@ function bindEvents() {
     dom.btnWarn.addEventListener('click', handleWarn);
     dom.btnBlock.addEventListener('click', handleBlock);
 
+    // ── Live File Scanner Dropzone Event Listeners ──
+    const dropzone = $('file-dropzone');
+    const fileInput = $('file-scanner-input');
+    if (dropzone && fileInput) {
+        dropzone.addEventListener('click', () => fileInput.click());
+        dropzone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropzone.style.borderColor = '#00f0ff';
+            dropzone.style.background = 'rgba(0, 240, 255, 0.1)';
+        });
+        dropzone.addEventListener('dragleave', () => {
+            dropzone.style.borderColor = 'rgba(0, 240, 255, 0.4)';
+            dropzone.style.background = 'rgba(0, 240, 255, 0.03)';
+        });
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropzone.style.borderColor = 'rgba(0, 240, 255, 0.4)';
+            dropzone.style.background = 'rgba(0, 240, 255, 0.03)';
+            if (e.dataTransfer.files && e.dataTransfer.files.length) {
+                handleUserFileScan(e.dataTransfer.files[0]);
+            }
+        });
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files.length) {
+                handleUserFileScan(e.target.files[0]);
+            }
+        });
+    }
+
     // ── Sidebar Navigation Click Handlers ──
     const navItems = document.querySelectorAll('#sidebar-nav .nav-item');
     navItems.forEach(item => {
@@ -861,11 +890,122 @@ async function autoDetectClientIP() {
             });
         }
         addLog(`Workstation connected (IP: ${MY_TEST_IP}). Real-time telemetry engaged.`, "system");
+        const ipBadge = $('user-ip-badge');
+        if (ipBadge) ipBadge.innerText = `Your Workstation IP: ${MY_TEST_IP}`;
         renderTable();
         updateCounters();
     } catch (e) {
         // Silently fallback if offline
     }
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// LIVE USER FILE INTERCEPTION HANDLER
+// ─────────────────────────────────────────────────────────────────────
+function handleUserFileScan(file) {
+    if (!file) return;
+
+    const toolSelectVal = $('live-scan-tool') ? $('live-scan-tool').value : 'Phind.com|unapproved';
+    const [toolName, toolStatus] = toolSelectVal.split('|');
+    const isToolApproved = toolStatus === 'approved';
+
+    const fileName = file.name;
+    const lowerName = fileName.toLowerCase();
+    const ip = MY_TEST_IP || '10.0.12.99';
+
+    // Sensitive Data Keyword & Filetype Heuristics
+    const sensitiveKeywords = [
+        'salary', 'matrix', 'pno', 'ic', 'pass', 'key', 'secret', 'confidential',
+        'financial', 'report', 'q1', 'q2', 'q3', 'q4', 'review', 'rating', 'payroll',
+        'code', 'src', 'auth', 'database', 'sql', 'zip', 'csv', 'xlsx'
+    ];
+
+    const isSensitive = sensitiveKeywords.some(kw => lowerName.includes(kw)) || file.size > 2000000;
+
+    const outputBox = $('live-scan-output');
+    const outputTitle = $('scan-output-title');
+    const outputDesc = $('scan-output-desc');
+    const dropzoneText = $('dropzone-text');
+
+    if (dropzoneText) dropzoneText.innerText = `📄 Scanned File: ${fileName} (${(file.size / 1024).toFixed(1)} KB)`;
+
+    if (!isToolApproved || isSensitive) {
+        // PRE-UPLOAD INTERCEPTED (0 Bytes Sent to AI)
+        if (outputBox) {
+            outputBox.classList.remove('hidden');
+            outputBox.style.background = 'rgba(255, 51, 102, 0.12)';
+            outputBox.style.border = '1px solid rgba(255, 51, 102, 0.4)';
+            outputTitle.style.color = '#ff3366';
+            outputTitle.innerText = `🚫 PRE-UPLOAD BLOCKED: 0 Bytes Sent to ${toolName}`;
+            outputDesc.innerText = `Endpoint Agent AI intercepted ${fileName} on workstation IP ${ip}. Reason: ${!isToolApproved ? 'Unapproved Shadow AI Tool' : 'Restricted Confidential File Categories Detected'}.`;
+        }
+
+        const detectedTags = [];
+        if (!isToolApproved) detectedTags.push('Unapproved Shadow AI Tool');
+        if (lowerName.includes('salary') || lowerName.includes('payroll') || lowerName.includes('xlsx')) detectedTags.push('Confidential Salary Data & PII');
+        if (lowerName.includes('code') || lowerName.includes('src') || lowerName.includes('zip')) detectedTags.push('Proprietary Source Code & Secrets');
+        if (lowerName.includes('review') || lowerName.includes('docx')) detectedTags.push('Confidential HR Records');
+        if (!detectedTags.length) detectedTags.push('Sensitive Corporate Document');
+
+        const newThreat = {
+            id: 'user-scan-' + Date.now(),
+            name: `Your Workstation (IP: ${ip})`,
+            dept: "Engineering",
+            tool: toolName,
+            toolApproved: isToolApproved,
+            file: fileName,
+            uploadStatus: "Blocked — Confidential",
+            riskLevel: "high",
+            riskScore: 96,
+            ip: ip,
+            date: nowTimestamp(),
+            fileType: file.type || 'File (' + fileName.split('.').pop() + ')',
+            dataFound: detectedTags
+        };
+
+        workers.unshift(newThreat);
+        totalBlocked++;
+        if (departments["Engineering"]) {
+            departments["Engineering"].blocked++;
+            departments["Engineering"].alerts++;
+            departments["Engineering"].risk = "High Risk";
+            departments["Engineering"].riskClass = "badge-danger";
+        }
+
+        addLog(`[PRE-UPLOAD INTERCEPTION] <strong>${fileName}</strong> blocked at your IP ${ip} BEFORE transmission to <strong>${toolName}</strong>. 0 Bytes sent to AI.`, "threat");
+    } else {
+        // PRE-UPLOAD CLEARED
+        if (outputBox) {
+            outputBox.classList.remove('hidden');
+            outputBox.style.background = 'rgba(16, 185, 129, 0.12)';
+            outputBox.style.border = '1px solid rgba(16, 185, 129, 0.4)';
+            outputTitle.style.color = '#10b981';
+            outputTitle.innerText = `🟢 PRE-UPLOAD CLEARED: Upload Allowed to ${toolName}`;
+            outputDesc.innerText = `Endpoint Agent AI scanned ${fileName}. Tool is whitelisted and no confidential data patterns were detected.`;
+        }
+
+        const newCleared = {
+            id: 'user-scan-' + Date.now(),
+            name: `Your Workstation (IP: ${ip})`,
+            dept: "Engineering",
+            tool: toolName,
+            toolApproved: true,
+            file: fileName,
+            uploadStatus: "Allowed",
+            riskLevel: "low",
+            riskScore: 5,
+            ip: ip,
+            date: nowTimestamp(),
+            fileType: file.type || 'File (' + fileName.split('.').pop() + ')',
+            dataFound: ["No confidential content detected"]
+        };
+
+        workers.unshift(newCleared);
+        addLog(`[CLEARED] Endpoint Agent AI inspected ${fileName}. Upload to ${toolName} allowed.`, "approved");
+    }
+
+    renderTable();
+    updateCounters();
 }
 
 // ─────────────────────────────────────────────────────────────────────
