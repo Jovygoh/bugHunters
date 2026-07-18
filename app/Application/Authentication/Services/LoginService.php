@@ -10,7 +10,7 @@ final readonly class LoginService
 {
     private const ROLE_ABILITIES = [
         'security_admin' => [
-            'dashboard:view', 'employees:view', 'employees:manage', 'departments:view',
+            'dashboard:view', 'employees:view', 'employees:manage', 'departments:view', 'departments:manage',
             'devices:view', 'devices:manage', 'ai-tools:view', 'ai-tools:manage',
             'discovery:view', 'discovery:manage', 'classifications:view',
             'classifications:manage', 'policies:view', 'policies:manage',
@@ -64,4 +64,3 @@ final readonly class LoginService
             ->all();
     }
 }
-

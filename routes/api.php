@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\Auth\AuthController;
 use App\Http\Controllers\Api\V1\Employees\EmployeeController;
+use App\Http\Controllers\Api\V1\Departments\DepartmentController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1/auth')->name('api.v1.auth.')->group(function (): void {
@@ -21,4 +22,6 @@ Route::prefix('v1')
     ->group(function (): void {
         Route::apiResource('employees', EmployeeController::class)
             ->whereUuid('employee');
+        Route::apiResource('departments', DepartmentController::class)
+            ->whereUuid('department');
     });
