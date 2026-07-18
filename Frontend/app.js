@@ -683,25 +683,38 @@ function simulateSafeUpload() {
     const act = safeActivities[Math.floor(Math.random() * safeActivities.length)];
     const d = departments[act.dept];
     if (d) d.uploads++;
+
+    // Update timestamp & file activity for a worker in this department to reflect live activity
+    const deptWorkers = workers.filter(w => w.dept === act.dept && w.riskLevel === 'low');
+    if (deptWorkers.length) {
+        const worker = deptWorkers[Math.floor(Math.random() * deptWorkers.length)];
+        worker.file = act.file;
+        worker.date = nowTimestamp();
+    }
+
     addLog(act.msg, "approved");
+    renderTable();
 }
 
 function simulateUndefinedAIAlert() {
-    // Pick from pool, avoid duplicates
-    const existingNames = workers.filter(w => w.riskLevel === 'high').map(w => w.name);
-    const available = simulationPool.filter(p => !existingNames.includes(p.name));
-    if (!available.length) { simulateSafeUpload(); return; }
+    const template = simulationPool[Math.floor(Math.random() * simulationPool.length)];
+    
+    // Check if worker is already in the list
+    const existing = workers.find(w => w.name === template.name);
+    if (existing) {
+        existing.date = nowTimestamp();
+        existing.riskScore = Math.min(99, existing.riskScore + 1);
+    } else {
+        const newWorker = { ...template, id: 'sim-' + Date.now(), date: nowTimestamp() };
+        workers.unshift(newWorker);
+        totalBlocked++;
+    }
 
-    const template = available[Math.floor(Math.random() * available.length)];
-    const newWorker = { ...template, id: 'sim-' + Date.now() };
-    workers.unshift(newWorker);
-    totalBlocked++;
-
-    const d = departments[newWorker.dept];
+    const d = departments[template.dept];
     if (d) { d.blocked++; d.alerts++; d.risk = "High Risk"; d.riskClass = "badge-danger"; }
 
     addLog(
-        `[BLOCKED] ${newWorker.name} (${newWorker.ip}) attempted to upload <strong>${newWorker.file}</strong> to undefined tool: <strong>${newWorker.tool}</strong>. Upload intercepted.`,
+        `[BLOCKED] ${template.name} (${template.ip}) attempted to upload <strong>${template.file}</strong> to undefined tool: <strong>${template.tool}</strong>. Upload intercepted.`,
         "threat"
     );
     renderTable();
