@@ -70,7 +70,11 @@
                     <h1>AI Governance Dashboard</h1>
                     <p class="header-subtitle">Background detection system — monitors employee file uploads to AI tools for confidential data in real time</p>
                 </div>
-                <div class="header-actions">
+                <div class="header-actions" style="display:flex;gap:10px;">
+                    <button class="btn btn-primary" id="btn-trigger-backend" style="background:linear-gradient(135deg,#00f0ff,#3b82f6);color:#06090e;font-weight:600;border:none;">
+                        <i data-lucide="zap"></i>
+                        <span>Test Live Backend Scan</span>
+                    </button>
                     <button class="btn btn-outline" id="btn-reset-data">
                         <i data-lucide="rotate-ccw"></i>
                         <span>Reset Alerts</span>

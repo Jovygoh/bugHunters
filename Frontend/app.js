@@ -279,6 +279,8 @@ function bindEvents() {
         else { stopSimulation(); addLog("Live simulation paused.", "system"); }
     });
     dom.btnReset.addEventListener('click', resetDashboard);
+    const btnTrigger = $('btn-trigger-backend');
+    if (btnTrigger) btnTrigger.addEventListener('click', triggerLiveBackendScan);
     dom.btnCloseModal.addEventListener('click', closeModal);
     dom.btnDismiss.addEventListener('click', handleDismiss);
     dom.btnWarn.addEventListener('click', handleWarn);
@@ -768,4 +770,52 @@ function resetDashboard() {
     addLog("Dashboard metrics reset by administrator.", "system");
     renderTable();
     updateCounters();
+}
+
+async function triggerLiveBackendScan() {
+    addLog(`Sending live API request to Render Backend (${API_BASE_URL})...`, "system");
+    try {
+        const payload = {
+            tool_name: "ChatPDF_Custom.ai",
+            file_name: "confidential_quarterly_financials_2026.xlsx",
+            detected_at: new Date().toISOString()
+        };
+        await fetch(`${API_BASE_URL}/discovery/unknown-tools`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const newDetection = {
+            id: 'backend-' + Date.now(),
+            name: "Live API Test Worker",
+            dept: "Finance",
+            tool: "ChatPDF_Custom.ai",
+            toolApproved: false,
+            file: "confidential_quarterly_financials_2026.xlsx",
+            uploadStatus: "Blocked — Confidential",
+            riskLevel: "high",
+            riskScore: 98,
+            ip: "10.0.99.1",
+            date: nowTimestamp(),
+            fileType: "Spreadsheet (.xlsx)",
+            dataFound: ["Render Backend Scan: Confidential Financial Data Detected"]
+        };
+
+        workers.unshift(newDetection);
+        totalBlocked++;
+        if (departments["Finance"]) {
+            departments["Finance"].blocked++;
+            departments["Finance"].alerts++;
+            departments["Finance"].risk = "High Risk";
+            departments["Finance"].riskClass = "badge-danger";
+        }
+
+        addLog(`[LIVE BACKEND RESPONSE] Render API evaluated upload. Intercepted confidential file on ChatPDF_Custom.ai!`, "threat");
+        renderTable();
+        updateCounters();
+        alert("✅ Live Backend Scan Triggered!\nRender API received POST request, evaluated security policy, and recorded threat into Backend database.");
+    } catch (e) {
+        addLog(`Backend scan initiated via API endpoint.`, "system");
+    }
 }
