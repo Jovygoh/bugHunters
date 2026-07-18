@@ -12,5 +12,8 @@ interface EmployeeRepositoryInterface extends RepositoryInterface
     public function findByEmployeeNumber(string $organizationId, string $employeeNumber): ?Employee;
 
     public function paginateByDepartment(string $organizationId, string $departmentId, int $perPage = 25): LengthAwarePaginator;
-}
 
+    public function findForOrganization(string $organizationId, string $employeeId): ?Employee;
+
+    public function paginateForOrganization(string $organizationId, array $filters = [], int $perPage = 25): LengthAwarePaginator;
+}

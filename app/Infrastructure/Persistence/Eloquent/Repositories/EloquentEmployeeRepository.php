@@ -20,6 +20,36 @@ final class EloquentEmployeeRepository extends AbstractEloquentRepository implem
         return Employee::query()->where('organization_id', $organizationId)->where('department_id', $departmentId)->paginate($perPage);
     }
 
+    public function findForOrganization(string $organizationId, string $employeeId): ?Employee
+    {
+        return Employee::query()
+            ->with(['user', 'department', 'managerEmployee'])
+            ->where('organization_id', $organizationId)
+            ->whereKey($employeeId)
+            ->first();
+    }
+
+    public function paginateForOrganization(string $organizationId, array $filters = [], int $perPage = 25): LengthAwarePaginator
+    {
+        $query = Employee::query()
+            ->with(['user', 'department', 'managerEmployee'])
+            ->where('organization_id', $organizationId);
+
+        foreach (array_intersect_key($filters, array_flip(['department_id', 'manager_employee_id', 'status', 'risk_level', 'employment_type'])) as $column => $value) {
+            $query->where($column, $value);
+        }
+
+        if (! empty($filters['search'])) {
+            $search = $filters['search'];
+            $query->where(function ($query) use ($search): void {
+                $query->where('display_name', 'like', "%{$search}%")
+                    ->orWhere('employee_number', 'like', "%{$search}%")
+                    ->orWhere('normalized_work_email', 'like', "%{$search}%");
+            });
+        }
+
+        return $query->orderBy('display_name')->paginate($perPage);
+    }
+
     protected function filterable(): array { return ['organization_id', 'department_id', 'manager_employee_id', 'status', 'risk_level']; }
 }
-
