@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="BugHunters - Real-Time AI Governance Dashboard. Detects confidential file uploads to unapproved AI tools.">
+    <title>BugHunters | AI Governance Dashboard</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+    <div class="bg-glow bg-glow-primary"></div>
+    <div class="bg-glow bg-glow-secondary"></div>
+
+    <div class="app-container">
+
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-logo">
+                <i data-lucide="shield-alert" class="logo-icon"></i>
+                <span class="logo-text">Bug<span>Hunters</span></span>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="#" class="nav-item active">
+                    <i data-lucide="layout-dashboard"></i>
+                    <span>Overview</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i data-lucide="bar-chart-3"></i>
+                    <span>Departments</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i data-lucide="users"></i>
+                    <span>Worker Monitor</span>
+                    <span class="badge badge-danger sidebar-alert-count hidden" id="sidebar-badge">0</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i data-lucide="file-x"></i>
+                    <span>Blocked Uploads</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i data-lucide="settings"></i>
+                    <span>Policies</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="system-status">
+                    <div class="status-indicator online"></div>
+                    <span>Detection Active</span>
+                </div>
+                <div class="sys-version">BugHunters v1.2.4</div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+
+            <!-- Header -->
+            <header class="main-header">
+                <div class="header-title">
+                    <h1>AI Governance Dashboard</h1>
+                    <p class="header-subtitle">Background detection system — monitors employee file uploads to AI tools for confidential data in real time</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-outline" id="btn-reset-data">
+                        <i data-lucide="rotate-ccw"></i>
+                        <span>Reset Alerts</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- System Flow Banner -->
+            <div class="flow-banner">
+                <div class="flow-step">
+                    <div class="flow-icon"><i data-lucide="upload"></i></div>
+                    <div class="flow-label">Employee uploads file to AI tool</div>
+                </div>
+                <div class="flow-arrow"><i data-lucide="chevron-right"></i></div>
+                <div class="flow-step active">
+                    <div class="flow-icon"><i data-lucide="scan-search"></i></div>
+                    <div class="flow-label">System scans for confidential content</div>
+                </div>
+                <div class="flow-arrow"><i data-lucide="chevron-right"></i></div>
+                <div class="flow-step">
+                    <div class="flow-icon safe"><i data-lucide="check-circle"></i></div>
+                    <div class="flow-label">Safe — upload allowed</div>
+                </div>
+                <div class="flow-divider">or</div>
+                <div class="flow-step danger">
+                    <div class="flow-icon danger"><i data-lucide="shield-ban"></i></div>
+                    <div class="flow-label">Confidential detected — upload blocked</div>
+                </div>
+                <div class="flow-arrow"><i data-lucide="chevron-right"></i></div>
+                <div class="flow-step">
+                    <div class="flow-icon alert"><i data-lucide="bell-ring"></i></div>
+                    <div class="flow-label">Manager alerted on dashboard</div>
+                </div>
+            </div>
+
+            <!-- Metric Counters -->
+            <section class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-icon-wrapper cyan"><i data-lucide="laptop"></i></div>
+                    <div class="metric-info">
+                        <span class="metric-label">Monitored Employees</span>
+                        <h2 class="metric-value" id="val-monitored">148</h2>
+                        <span class="metric-change positive"><i data-lucide="trending-up"></i> Active endpoints</span>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-icon-wrapper green"><i data-lucide="check-circle"></i></div>
+                    <div class="metric-info">
+                        <span class="metric-label">Approved AI Tools</span>
+                        <h2 class="metric-value" id="val-approved-tools">7</h2>
+                        <span class="metric-change neutral">Whitelisted tools</span>
+                    </div>
+                </div>
+                <div class="metric-card metric-card-hoverable" id="card-blocked">
+                    <div class="metric-icon-wrapper orange"><i data-lucide="file-x"></i></div>
+                    <div class="metric-info">
+                        <span class="metric-label">Uploads Blocked Today</span>
+                        <h2 class="metric-value" id="val-blocked">0</h2>
+                        <span class="metric-change neutral">Hover to see blocked files</span>
+                    </div>
+                </div>
+                <div class="metric-card alert-pulse-border" id="card-alerts">
+                    <div class="metric-icon-wrapper red"><i data-lucide="triangle-alert"></i></div>
+                    <div class="metric-info">
+                        <span class="metric-label">Undefined AI Tool Alerts</span>
+                        <h2 class="metric-value text-danger" id="val-alerts">0</h2>
+                        <span class="metric-change negative" id="alert-delta-text">Workers require attention</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Main Dashboard Grid -->
+            <section class="dashboard-grid">
+
+                <!-- Left: Department Chart + Inspector -->
+                <div class="grid-col left-col">
+
+                    <div class="glass-card chart-card">
+                        <div class="card-header">
+                            <div class="card-header-title">
+                                <i data-lucide="pie-chart"></i>
+                                <h2>AI Tool Usage by Department</h2>
+                            </div>
+                            <span class="header-hint">Hover to inspect</span>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="departmentChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Department Inspector Panel -->
+                    <div class="glass-card dept-inspector-card">
+                        <div class="card-header">
+                            <div class="card-header-title">
+                                <i data-lucide="info" class="text-primary"></i>
+                                <h2>Department Inspector</h2>
+                            </div>
+                        </div>
+
+                        <!-- Placeholder -->
+                        <div id="dept-placeholder" class="dept-placeholder">
+                            <div class="pulse-icon-large"><i data-lucide="mouse-pointer-click"></i></div>
+                            <h3>Hover a Department</h3>
+                            <p>Click or hover a chart segment to view which AI tools that department is using and any confidential upload violations.</p>
+                        </div>
+
+                        <!-- Content (hidden until hover) -->
+                        <div id="dept-content" class="dept-content hidden">
+                            <div class="dept-info-header">
+                                <h3 id="inspect-name">—</h3>
+                                <span class="badge" id="inspect-risk-badge">Low Risk</span>
+                            </div>
+                            <div class="info-grid">
+                                <div class="info-item">
+                                    <span class="info-label">Active Users</span>
+                                    <span class="info-value" id="inspect-users">0</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Files Uploaded Today</span>
+                                    <span class="info-value" id="inspect-uploads">0</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Blocked Uploads</span>
+                                    <span class="info-value text-danger" id="inspect-blocked">0</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Undefined AI Alerts</span>
+                                    <span class="info-value text-danger" id="inspect-alerts">0</span>
+                                </div>
+                            </div>
+
+                            <div class="tool-distribution">
+                                <h4>AI Tools in Use:</h4>
+                                <div class="tool-list" id="inspect-tools"></div>
+                            </div>
+
+                            <div class="policy-note" id="inspect-policy-note">
+                                <strong>Status:</strong>
+                                <p id="inspect-compliance">—</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: Worker Risk Monitor + Live Feed -->
+                <div class="grid-col right-col">
+
+                    <!-- Worker Risk Monitor Table -->
+                    <div class="glass-card worker-card">
+                        <div class="card-header">
+                            <div class="card-header-title">
+                                <i data-lucide="shield-alert" class="text-danger"></i>
+                                <h2>Worker Risk Monitor</h2>
+                            </div>
+                            <div class="simulation-switch-container">
+                                <span class="sim-label">Live Simulation</span>
+                                <label class="switch">
+                                    <input type="checkbox" id="toggle-simulation" checked>
+                                    <span class="slider round"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Info bar explaining the red rows -->
+                        <div class="table-info-bar">
+                            <i data-lucide="info"></i>
+                            <span>Rows highlighted in <strong class="text-danger">red</strong> indicate workers detected using <strong>undefined / unapproved AI tools</strong> while uploading company files — manager action required.</span>
+                        </div>
+
+                        <!-- Search & Filter -->
+                        <div class="search-filter-bar">
+                            <div class="search-input-wrapper">
+                                <i data-lucide="search" class="search-icon"></i>
+                                <input type="text" id="search-workers" placeholder="Search by name, department, or AI tool...">
+                            </div>
+                            <div class="filter-select-wrapper">
+                                <i data-lucide="filter" class="filter-icon"></i>
+                                <select id="filter-risk">
+                                    <option value="all">All Workers</option>
+                                    <option value="high">🔴 Undefined AI Tool (Alert)</option>
+                                    <option value="medium">🟡 Warning Issued</option>
+                                    <option value="low">🟢 Approved Tool (Safe)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Worker Table -->
+                        <div class="table-container">
+                            <table class="worker-table" id="worker-table">
+                                <thead>
+                                    <tr>
+                                        <th>Worker</th>
+                                        <th>Department</th>
+                                        <th>AI Tool Used</th>
+                                        <th>File / Activity</th>
+                                        <th>Upload Status</th>
+                                        <th>Date & Time</th>
+                                        <th>Risk Level</th>
+                                        <th class="text-center">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="worker-table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Live Detection Feed -->
+                    <div class="glass-card feed-card">
+                        <div class="card-header">
+                            <div class="card-header-title">
+                                <i data-lucide="terminal" class="text-primary"></i>
+                                <h2>Live Detection Feed</h2>
+                            </div>
+                            <div class="feed-pulse-indicator">
+                                <div class="pulse-dot"></div>
+                                <span>Scanning uploads in real-time</span>
+                            </div>
+                        </div>
+                        <div class="log-container" id="log-container">
+                            <div class="log-entry log-system">
+                                <span class="log-time">--:--:--</span>
+                                <span class="log-msg">AegisAI detection engine online. Monitoring all AI tool upload channels...</span>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Worker Alert Modal -->
+    <div class="modal-overlay hidden" id="risk-modal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <i data-lucide="triangle-alert" class="text-danger"></i>
+                    <h2>Undefined AI Tool — Upload Blocked</h2>
+                </div>
+                <button class="btn-close-modal" id="btn-close-modal"><i data-lucide="x"></i></button>
+            </div>
+            <div class="modal-body">
+
+                <!-- Zero Bytes Banner -->
+                <div class="blocked-banner">
+                    <i data-lucide="shield-ban"></i>
+                    <div>
+                        <h3>Upload Intercepted — 0 Bytes Sent to AI</h3>
+                        <p>File was blocked before transmission. Confidential content was not exposed.</p>
+                    </div>
+                </div>
+
+                <!-- Worker Info -->
+                <div class="modal-worker-row">
+                    <div class="modal-avatar" id="modal-avatar">JD</div>
+                    <div class="modal-worker-info">
+                        <h3 id="modal-name">John Doe</h3>
+                        <p id="modal-dept">Engineering Department</p>
+                        <p class="modal-ip" id="modal-ip">Workstation: 10.0.12.84</p>
+                    </div>
+                    <span class="intercepted-badge">BLOCKED</span>
+                </div>
+
+                <!-- Violation Details -->
+                <div class="modal-details-grid">
+                    <div class="modal-detail-item">
+                        <label>Undefined AI Tool</label>
+                        <strong class="text-danger" id="modal-tool">—</strong>
+                    </div>
+                    <div class="modal-detail-item">
+                        <label>File Type Detected</label>
+                        <strong class="text-warning" id="modal-filetype">—</strong>
+                    </div>
+                    <div class="modal-detail-item">
+                        <label>Confidential Data Found</label>
+                        <strong id="modal-datatype">—</strong>
+                    </div>
+                    <div class="modal-detail-item">
+                        <label>Risk Score</label>
+                        <strong id="modal-risk-score" class="text-danger">—</strong>
+                    </div>
+                </div>
+
+                <!-- Detected Content Summary -->
+                <div class="detected-content-card">
+                    <h4><i data-lucide="file-search"></i> Detected Content (not stored — metadata only):</h4>
+                    <div class="detected-tags" id="modal-detected-tags"></div>
+                    <p class="privacy-note"><i data-lucide="eye-off"></i> File content permanently discarded after inspection. Only metadata is logged.</p>
+                </div>
+
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" id="btn-modal-dismiss">Dismiss Alert</button>
+                <button class="btn btn-warning" id="btn-modal-warn">Send Warning to Worker</button>
+                <button class="btn btn-danger" id="btn-modal-block">Restrict Worker Access</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Blocked Files Tooltip — rendered at body level to avoid overflow clipping -->
+    <div class="blocked-files-tooltip" id="blocked-files-tooltip">
+        <div class="tooltip-header">
+            <i data-lucide="file-x"></i>
+            <span>Blocked Files</span>
+        </div>
+        <ul class="tooltip-file-list" id="blocked-files-list">
+            <li class="tooltip-empty">No files blocked yet</li>
+        </ul>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
