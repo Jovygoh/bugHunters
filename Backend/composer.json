@@ -2,14 +2,11 @@
     "name": "bughunters/backend",
     "type": "project",
     "description": "BugHunters AegisAI Backend API",
-    "keywords": ["laravel", "framework"],
     "license": "MIT",
     "require": {
         "php": "^8.2",
-        "guzzlehttp/guzzle": "^7.8",
         "laravel/framework": "^11.0",
-        "laravel/sanctum": "^4.0",
-        "laravel/tinker": "^2.9"
+        "laravel/sanctum": "^4.0"
     },
     "autoload": {
         "psr-4": {
@@ -18,17 +15,18 @@
             "Database\\Seeders\\": "database/seeders/"
         }
     },
-    "extra": {
-        "laravel": {
-            "dont-discover": []
-        }
-    },
     "config": {
         "optimize-autoloader": true,
         "preferred-install": "dist",
         "sort-packages": true,
+        "policy": {
+            "advisories": {
+                "block": false
+            }
+        },
         "audit": {
-            "block": false
+            "block": false,
+            "abandoned": "ignore"
         }
     },
     "minimum-stability": "stable",
