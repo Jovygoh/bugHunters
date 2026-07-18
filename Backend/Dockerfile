@@ -25,8 +25,9 @@ RUN composer install --no-dev --optimize-autoloader --no-interaction --no-securi
 
 RUN mkdir -p storage/framework/views storage/framework/cache storage/framework/sessions storage/logs bootstrap/cache database \
     && touch database/database.sqlite \
-    && chmod -R 777 storage bootstrap/cache database
+    && cp -n .env.example .env 2>/dev/null || true \
+    && chmod -R 777 storage bootstrap/cache database .env
 
 EXPOSE 10000
 
-CMD ["sh", "-c", "php artisan key:generate --force && php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=10000"]
+CMD ["sh", "-c", "cp -n .env.example .env 2>/dev/null || true && php artisan key:generate --force && php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=10000"]
