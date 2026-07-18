@@ -6,10 +6,14 @@ use App\Domain\Discovery\Repositories\DiscoveryRepositoryInterface;
 use App\Models\DiscoveryFinding;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Carbon;
+use App\Application\Notifications\Services\ManagerNotificationService;
 
 final readonly class UnknownAiToolDetectionService
 {
-    public function __construct(private DiscoveryRepositoryInterface $discovery) {}
+    public function __construct(
+        private DiscoveryRepositoryInterface $discovery,
+        private ManagerNotificationService $managerNotifications,
+    ) {}
 
     public function detect(string $organizationId, array $attributes): DiscoveryFinding
     {
@@ -21,7 +25,8 @@ final readonly class UnknownAiToolDetectionService
             true
         );
 
-        return DB::transaction(function () use ($organizationId, $attributes, $domain, $detectedAt, $deduplicationKey): DiscoveryFinding {
+        $isNew = false;
+        $finding = DB::transaction(function () use ($organizationId, $attributes, $domain, $detectedAt, $deduplicationKey, &$isNew): DiscoveryFinding {
             $existing = $this->discovery->findByDeduplicationKey($organizationId, $deduplicationKey);
 
             if ($existing) {
@@ -45,6 +50,7 @@ final readonly class UnknownAiToolDetectionService
             }
 
             /** @var DiscoveryFinding $finding */
+            $isNew = true;
             $finding = $this->discovery->create([
                 'organization_id' => $organizationId,
                 'employee_id' => $attributes['employee_id'],
@@ -64,6 +70,18 @@ final readonly class UnknownAiToolDetectionService
 
             return $finding;
         });
+
+        if ($isNew) {
+            $this->managerNotifications->newAiToolDetected(
+                $organizationId,
+                $attributes['employee_id'],
+                $domain,
+                $finding->getKey(),
+                (float) $attributes['risk_score'],
+            );
+        }
+
+        return $finding;
     }
 
     private function severity(float $riskScore): string

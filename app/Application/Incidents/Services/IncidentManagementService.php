@@ -4,6 +4,7 @@ namespace App\Application\Incidents\Services;
 
 use App\Domain\Incidents\Repositories\IncidentRepositoryInterface;
 use App\Domain\Devices\Repositories\DeviceRepositoryInterface;
+use App\Application\Notifications\Services\ManagerNotificationService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -25,11 +26,12 @@ final readonly class IncidentManagementService
     public function __construct(
         private IncidentRepositoryInterface $incidents,
         private DeviceRepositoryInterface $devices,
+        private ManagerNotificationService $managerNotifications,
     ) {}
 
     public function create(string $organizationId, array $attributes): Model
     {
-        return DB::transaction(function () use ($organizationId, $attributes): Model {
+        $incident = DB::transaction(function () use ($organizationId, $attributes): Model {
             $riskScore = (float) $attributes['risk'];
             $incident = $this->incidents->create([
                 'organization_id' => $organizationId,
@@ -64,6 +66,17 @@ final readonly class IncidentManagementService
 
             return $incident;
         });
+
+        if ((float) $attributes['risk'] >= 70) {
+            $this->managerNotifications->highRiskIncident(
+                $organizationId,
+                $attributes['employee_id'],
+                $incident->getKey(),
+                (float) $attributes['risk'],
+            );
+        }
+
+        return $incident;
     }
 
     public function get(string $organizationId, string $incidentId): Model

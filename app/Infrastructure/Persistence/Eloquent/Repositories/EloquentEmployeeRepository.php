@@ -5,6 +5,8 @@ namespace App\Infrastructure\Persistence\Eloquent\Repositories;
 use App\Domain\Employees\Repositories\EmployeeRepositoryInterface;
 use App\Models\Employee;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use App\Models\User;
+use Illuminate\Database\Eloquent\Collection;
 
 final class EloquentEmployeeRepository extends AbstractEloquentRepository implements EmployeeRepositoryInterface
 {
@@ -49,6 +51,24 @@ final class EloquentEmployeeRepository extends AbstractEloquentRepository implem
         }
 
         return $query->orderBy('display_name')->paginate($perPage);
+    }
+
+    public function managerUsersForEmployee(string $organizationId, string $employeeId): Collection
+    {
+        $employee = Employee::query()
+            ->with(['managerEmployee.user', 'department.managerEmployee.user'])
+            ->where('organization_id', $organizationId)
+            ->whereKey($employeeId)
+            ->first();
+
+        if (! $employee) {
+            return (new User)->newCollection();
+        }
+
+        return (new User)->newCollection([
+            $employee->managerEmployee?->user,
+            $employee->department?->managerEmployee?->user,
+        ])->filter()->unique('id')->values();
     }
 
     protected function filterable(): array { return ['organization_id', 'department_id', 'manager_employee_id', 'status', 'risk_level']; }

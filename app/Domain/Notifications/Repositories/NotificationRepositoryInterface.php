@@ -19,5 +19,10 @@ interface NotificationRepositoryInterface extends RepositoryInterface
     public function upsertPreference(array $identity, array $attributes): NotificationPreference;
 
     public function createDelivery(array $attributes): NotificationDelivery;
-}
 
+    public function findForUser(string $organizationId, string $userId, string $notificationId): ?Notification;
+
+    public function paginateForUser(string $organizationId, string $userId, array $filters = [], int $perPage = 25): LengthAwarePaginator;
+
+    public function unreadCount(string $organizationId, string $userId): int;
+}

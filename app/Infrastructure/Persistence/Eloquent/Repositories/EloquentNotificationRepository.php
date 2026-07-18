@@ -33,6 +33,39 @@ final class EloquentNotificationRepository extends AbstractEloquentRepository im
         return NotificationDelivery::query()->create($attributes);
     }
 
+    public function findForUser(string $organizationId, string $userId, string $notificationId): ?Notification
+    {
+        return Notification::query()
+            ->where('organization_id', $organizationId)
+            ->where('recipient_user_id', $userId)
+            ->whereKey($notificationId)
+            ->first();
+    }
+
+    public function paginateForUser(string $organizationId, string $userId, array $filters = [], int $perPage = 25): LengthAwarePaginator
+    {
+        $query = Notification::query()
+            ->where('organization_id', $organizationId)
+            ->where('recipient_user_id', $userId);
+
+        foreach (array_intersect_key($filters, array_flip(['notification_type', 'severity'])) as $column => $value) {
+            $query->where($column, $value);
+        }
+
+        if (($filters['read_status'] ?? null) === 'read') $query->whereNotNull('read_at');
+        if (($filters['read_status'] ?? null) === 'unread') $query->whereNull('read_at');
+
+        return $query->orderByDesc('created_at')->paginate($perPage);
+    }
+
+    public function unreadCount(string $organizationId, string $userId): int
+    {
+        return Notification::query()
+            ->where('organization_id', $organizationId)
+            ->where('recipient_user_id', $userId)
+            ->whereNull('read_at')
+            ->count();
+    }
+
     protected function filterable(): array { return ['organization_id', 'recipient_user_id', 'notification_type', 'severity', 'read_at']; }
 }
-

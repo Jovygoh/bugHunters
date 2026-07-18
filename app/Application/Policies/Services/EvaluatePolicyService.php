@@ -6,6 +6,7 @@ use App\Domain\Employees\Repositories\EmployeeRepositoryInterface;
 use App\Domain\Policies\Repositories\PolicyRepositoryInterface;
 use App\Models\PolicyEvaluation;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use App\Application\Notifications\Services\ManagerNotificationService;
 
 final readonly class EvaluatePolicyService
 {
@@ -13,6 +14,7 @@ final readonly class EvaluatePolicyService
         private PolicyRepositoryInterface $policies,
         private EmployeeRepositoryInterface $employees,
         private PolicyDecisionService $decisions,
+        private ManagerNotificationService $managerNotifications,
     ) {}
 
     public function execute(string $organizationId, array $context): PolicyEvaluation
@@ -41,7 +43,7 @@ final readonly class EvaluatePolicyService
         ];
 
         if ($policies->isEmpty()) {
-            return $this->policies->createEvaluation([
+            $evaluation = $this->policies->createEvaluation([
                 'organization_id' => $organizationId,
                 ...$evaluationContext,
                 'decision' => 'block',
@@ -50,6 +52,15 @@ final readonly class EvaluatePolicyService
                 'context_hash' => hash('sha256', json_encode($evaluationContext, JSON_THROW_ON_ERROR), true),
                 'evaluated_at' => now(),
             ]);
+
+            $this->managerNotifications->policyViolation(
+                $organizationId,
+                $context['employee_id'],
+                $evaluation->getKey(),
+                'block',
+            );
+
+            return $evaluation;
         }
 
         $matches = $policies->map(function ($policy): array {
@@ -66,7 +77,17 @@ final readonly class EvaluatePolicyService
             ];
         })->all();
 
-        return $this->decisions->execute($organizationId, $evaluationContext, $matches);
+        $evaluation = $this->decisions->execute($organizationId, $evaluationContext, $matches);
+
+        if ($evaluation->decision !== 'allow') {
+            $this->managerNotifications->policyViolation(
+                $organizationId,
+                $context['employee_id'],
+                $evaluation->getKey(),
+                $evaluation->decision,
+            );
+        }
+
+        return $evaluation;
     }
 }
-

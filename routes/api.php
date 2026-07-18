@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\V1\DataClassification\ViolationTypeController;
 use App\Http\Controllers\Api\V1\Policies\PolicyController;
 use App\Http\Controllers\Api\V1\Policies\PolicyEvaluationController;
 use App\Http\Controllers\Api\V1\Incidents\IncidentController;
+use App\Http\Controllers\Api\V1\Notifications\NotificationController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1/auth')->name('api.v1.auth.')->group(function (): void {
@@ -72,4 +73,13 @@ Route::prefix('v1')
         Route::apiResource('incidents', IncidentController::class)
             ->except('destroy')
             ->whereUuid('incident');
+        Route::get('notifications', [NotificationController::class, 'index'])
+            ->name('notifications.index');
+        Route::get('notifications/unread-count', [NotificationController::class, 'unreadCount'])
+            ->name('notifications.unread-count');
+        Route::patch('notifications/{notification}/read', [NotificationController::class, 'markRead'])
+            ->whereUuid('notification')
+            ->name('notifications.read');
+        Route::put('notification-preferences', [NotificationController::class, 'updatePreference'])
+            ->name('notification-preferences.update');
     });
