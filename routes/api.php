@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\V1\Auth\AuthController;
 use App\Http\Controllers\Api\V1\Employees\EmployeeController;
 use App\Http\Controllers\Api\V1\Departments\DepartmentController;
 use App\Http\Controllers\Api\V1\Devices\DeviceController;
+use App\Http\Controllers\Api\V1\AiTools\AiToolController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1/auth')->name('api.v1.auth.')->group(function (): void {
@@ -33,4 +34,7 @@ Route::prefix('v1')
             ->name('devices.verify');
         Route::apiResource('devices', DeviceController::class)
             ->whereUuid('device');
+        Route::apiResource('ai-tools', AiToolController::class)
+            ->parameters(['ai-tools' => 'aiTool'])
+            ->whereUuid('aiTool');
     });

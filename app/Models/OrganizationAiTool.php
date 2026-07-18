@@ -19,6 +19,9 @@ class OrganizationAiTool extends UuidModel
             'organization_id',
             'catalog_ai_tool_id',
             'display_name',
+            'primary_domain',
+            'category',
+            'description',
             'status',
             'approval_status',
             'risk_level',
@@ -62,4 +65,3 @@ class OrganizationAiTool extends UuidModel
 
     public function incidents(): HasMany { return $this->hasMany(Incident::class); }
 }
-
