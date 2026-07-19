@@ -1,18 +1,28 @@
 // AegisAI — Core Application Logic
 // System flow: Employee uploads file → background scan → block if confidential → alert manager
 
-// Define the backend URL based on where the frontend is running
-const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-    ? 'http://localhost:8000/api' // Your local Laravel server
-    : 'https://bughunters-h0w4.onrender.com'; // Replace this with your actual Render URL!
+// Override with window.BUGHUNTERS_API_URL before this script loads when needed.
+// Laravel mounts routes/api.php below /api.
+const API_BASE_URL = (window.BUGHUNTERS_API_URL || (
+    window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        ? 'http://localhost:8000/api'
+        : 'https://bughunters-h0w4.onrender.com/api'
+)).replace(/\/$/, '');
+
+let backendConnected = false;
+let liveSummary = null;
 
 async function fetchBugs() {
     try {
         const response = await fetch(`${API_BASE_URL}/bugs`);
+        if (!response.ok) throw new Error(`API health check returned ${response.status}`);
         const data = await response.json();
-        console.log(data);
+        backendConnected = data.status === 'success';
+        return backendConnected;
     } catch (error) {
-        console.error("Error fetching data:", error);
+        backendConnected = false;
+        console.error('Backend health check failed:', error);
+        return false;
     }
 }
 
@@ -256,13 +266,18 @@ const dom = {
 // ─────────────────────────────────────────────────────────────────────
 // INIT
 // ─────────────────────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     lucide.createIcons();
     initChart();
     renderTable();
     updateCounters();
     bindEvents();
     bindTooltip();
+    const connected = await fetchBugs();
+    addLog(
+        connected ? 'Backend API connected. Loading live detections.' : 'Backend API unavailable. Continuing with local simulation data.',
+        connected ? 'system' : 'threat'
+    );
     startSimulation();
     autoDetectClientIP();
     addLog("BugHunters detection engine started. Monitoring file upload channels for all AI tools.", "system");
@@ -554,10 +569,10 @@ function renderTable() {
 function updateCounters() {
     const alertCount = workers.filter(w => w.riskLevel === 'high').length;
 
-    dom.valMonitored.innerText = 148;
-    dom.valApproved.innerText = 7;
-    dom.valBlocked.innerText = totalBlocked;
-    dom.valAlerts.innerText = alertCount;
+    dom.valMonitored.innerText = liveSummary?.monitored_employees ?? 148;
+    dom.valApproved.innerText = liveSummary?.approved_tools ?? 7;
+    dom.valBlocked.innerText = liveSummary?.blocked_today ?? totalBlocked;
+    dom.valAlerts.innerText = liveSummary?.undefined_alerts ?? alertCount;
 
     if (alertCount > 0) {
         dom.cardAlerts.classList.add('active');
@@ -712,23 +727,28 @@ const safeActivities = [
 async function fetchBackendDetections() {
     try {
         const response = await fetch(`${API_BASE_URL}/live-detections`);
-        if (response.ok) {
-            const data = await response.json();
-            if (data && data.detections && data.detections.length) {
-                data.detections.forEach(item => {
-                    const idx = workers.findIndex(w => w.id === item.id || w.name === item.name);
-                    if (idx !== -1) {
-                        workers[idx] = { ...workers[idx], ...item };
-                    } else {
-                        workers.unshift(item);
-                    }
-                });
-                renderTable();
-                updateCounters();
-            }
+        if (!response.ok) throw new Error(`Live detections returned ${response.status}`);
+
+        const data = await response.json();
+        backendConnected = true;
+        liveSummary = data.summary || null;
+
+        if (Array.isArray(data.detections)) {
+            data.detections.forEach(item => {
+                // Demo and backend records historically reused ids for different people.
+                const idx = workers.findIndex(w => w.name === item.name);
+                if (idx !== -1) {
+                    workers[idx] = { ...workers[idx], ...item, id: workers[idx].id, source: 'backend' };
+                } else {
+                    workers.unshift({ ...item, id: `backend-${item.id}`, source: 'backend' });
+                }
+            });
+            renderTable();
+            updateCounters();
         }
     } catch (e) {
-        // Fallback to local simulation if offline
+        backendConnected = false;
+        console.error('Unable to refresh live detections:', e);
     }
 }
 
