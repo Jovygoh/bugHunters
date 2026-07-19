@@ -8,5 +8,7 @@ return [
     'allowed_headers' => ['*'],
     'exposed_headers' => [],
     'max_age' => 0,
-    'supports_credentials' => true,
+    // Public dashboard requests do not send cookies. Wildcard origins and
+    // credentialed CORS must not be combined.
+    'supports_credentials' => false,
 ];
