@@ -98,22 +98,14 @@ Route::prefix('v1')
     });
 
 Route::get('live-detections', function() {
-    return response()->json([
-        'status' => 'success',
-        'timestamp' => now()->toIso8601String(),
-        'summary' => [
-            'monitored_employees' => 148,
-            'approved_tools' => 7,
-            'blocked_today' => 4,
-            'undefined_alerts' => 6
-        ],
-        'detections' => [
+    $detections = \Illuminate\Support\Facades\Cache::remember('live_detections', 300, function() {
+        return [
             [
                 'id' => 'w1', 'name' => 'Clara Ng', 'dept' => 'Engineering',
                 'tool' => 'Phind.com', 'toolApproved' => false,
                 'file' => 'auth_service_src.zip',
                 'uploadStatus' => 'Blocked — Confidential', 'riskLevel' => 'high', 'riskScore' => 89,
-                'ip' => '10.0.12.55', 'date' => now()->format('d M Y, H:i'),
+                'ip' => '10.0.12.55', 'date' => null,
                 'fileType' => 'Archive (.zip)',
                 'dataFound' => ['Proprietary source code', 'API secret keys']
             ],
@@ -122,7 +114,7 @@ Route::get('live-detections', function() {
                 'tool' => 'ChatPDF.com', 'toolApproved' => false,
                 'file' => 'employee_salary_matrix_2026.xlsx',
                 'uploadStatus' => 'Blocked — Confidential', 'riskLevel' => 'high', 'riskScore' => 95,
-                'ip' => '10.0.8.77', 'date' => now()->format('d M Y, H:i'),
+                'ip' => '10.0.8.77', 'date' => null,
                 'fileType' => 'Spreadsheet (.xlsx)',
                 'dataFound' => ['Employee salary data', 'Personal IC numbers']
             ],
@@ -131,7 +123,7 @@ Route::get('live-detections', function() {
                 'tool' => 'Writesonic.com', 'toolApproved' => false,
                 'file' => 'performance_reviews_Q2.docx',
                 'uploadStatus' => 'Blocked — Confidential', 'riskLevel' => 'high', 'riskScore' => 87,
-                'ip' => '10.0.4.88', 'date' => now()->format('d M Y, H:i'),
+                'ip' => '10.0.4.88', 'date' => null,
                 'fileType' => 'Document (.docx)',
                 'dataFound' => ['Employee performance ratings']
             ],
@@ -140,7 +132,7 @@ Route::get('live-detections', function() {
                 'tool' => 'AskAI.so', 'toolApproved' => false,
                 'file' => 'client_list_Q3_2026.csv',
                 'uploadStatus' => 'Blocked — Confidential', 'riskLevel' => 'high', 'riskScore' => 82,
-                'ip' => '10.0.21.99', 'date' => now()->format('d M Y, H:i'),
+                'ip' => '10.0.21.99', 'date' => null,
                 'fileType' => 'CSV (.csv)',
                 'dataFound' => ['Customer names and contacts']
             ],
@@ -149,7 +141,7 @@ Route::get('live-detections', function() {
                 'tool' => 'PDFSummarize.ai', 'toolApproved' => false,
                 'file' => 'Q2_Financial_Report.xlsx',
                 'uploadStatus' => 'Blocked — Confidential', 'riskLevel' => 'high', 'riskScore' => 91,
-                'ip' => '10.0.8.12', 'date' => now()->format('d M Y, H:i'),
+                'ip' => '10.0.8.12', 'date' => null,
                 'fileType' => 'Spreadsheet (.xlsx)',
                 'dataFound' => ['Revenue figures', 'Unreleased earnings data']
             ],
@@ -158,7 +150,7 @@ Route::get('live-detections', function() {
                 'tool' => 'PromptBase.com', 'toolApproved' => false,
                 'file' => 'brand_guidelines_v3_CONFIDENTIAL.pdf',
                 'uploadStatus' => 'Blocked — Confidential', 'riskLevel' => 'high', 'riskScore' => 78,
-                'ip' => '10.0.15.44', 'date' => now()->format('d M Y, H:i'),
+                'ip' => '10.0.15.44', 'date' => null,
                 'fileType' => 'Document (.pdf)',
                 'dataFound' => ['Confidential brand strategy']
             ],
@@ -167,7 +159,7 @@ Route::get('live-detections', function() {
                 'tool' => 'GitHub Copilot', 'toolApproved' => true,
                 'file' => 'api_routes.js (code refactor)',
                 'uploadStatus' => 'Allowed', 'riskLevel' => 'low', 'riskScore' => 8,
-                'ip' => '10.0.12.34', 'date' => now()->format('d M Y, H:i'),
+                'ip' => '10.0.12.34', 'date' => null,
                 'fileType' => 'Source Code (.js)',
                 'dataFound' => ['No confidential content detected']
             ],
@@ -176,12 +168,63 @@ Route::get('live-detections', function() {
                 'tool' => 'ChatGPT Enterprise', 'toolApproved' => true,
                 'file' => 'campaign_brief.docx',
                 'uploadStatus' => 'Allowed', 'riskLevel' => 'low', 'riskScore' => 14,
-                'ip' => '10.0.15.89', 'date' => now()->format('d M Y, H:i'),
+                'ip' => '10.0.15.89', 'date' => null,
                 'fileType' => 'Document (.docx)',
                 'dataFound' => ['No confidential content detected']
             ]
-        ]
+        ];
+    });
+
+    foreach ($detections as &$detection) {
+        if (empty($detection['date'])) {
+            $detection['date'] = now()->format('d M Y, H:i');
+        }
+    }
+
+    return response()->json([
+        'status' => 'success',
+        'timestamp' => now()->toIso8601String(),
+        'summary' => [
+            'monitored_employees' => 148,
+            'approved_tools' => 7,
+            'blocked_today' => collect($detections)->filter(fn($d) => str_starts_with($d['uploadStatus'], 'Blocked'))->count(),
+            'undefined_alerts' => collect($detections)->filter(fn($d) => $d['riskLevel'] === 'high')->count()
+        ],
+        'detections' => $detections
     ]);
+});
+
+Route::post('live-detections/action', function(Illuminate\Http\Request $request) {
+    $workerName = $request->input('name');
+    $action = $request->input('action');
+    
+    $detections = \Illuminate\Support\Facades\Cache::get('live_detections', []);
+    
+    // If not initialized, pull the defaults
+    if (empty($detections)) {
+        // Simple trick: trigger a GET to populate the cache, then reload
+        app()->handle(Illuminate\Http\Request::create('/api/live-detections', 'GET'));
+        $detections = \Illuminate\Support\Facades\Cache::get('live_detections', []);
+    }
+    
+    foreach ($detections as &$detection) {
+        if ($detection['name'] === $workerName) {
+            if ($action === 'warn') {
+                $detection['riskLevel'] = 'medium';
+                $detection['uploadStatus'] = 'Warning Issued';
+                $detection['riskScore'] = max($detection['riskScore'] - 20, 40);
+            } elseif ($action === 'block') {
+                $detection['riskLevel'] = 'low';
+                $detection['uploadStatus'] = 'Access Restricted';
+                $detection['riskScore'] = 0;
+            }
+        }
+    }
+    unset($detection);
+    
+    \Illuminate\Support\Facades\Cache::put('live_detections', $detections, 300);
+    
+    return response()->json(['status' => 'success']);
 });
 
 Route::get('bugs', function() {
