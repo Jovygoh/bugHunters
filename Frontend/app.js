@@ -5,7 +5,7 @@
 // Laravel mounts routes/api.php below /api.
 const API_BASE_URL = (window.BUGHUNTERS_API_URL || (
     window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-        ? 'http://localhost:8000/api'
+        ? 'http://127.0.0.1:8000/api'
         : 'https://bughunters-h0w4.onrender.com/api'
 )).replace(/\/$/, '');
 
@@ -219,48 +219,48 @@ let totalBlocked = 0;
 const $ = id => document.getElementById(id);
 
 const dom = {
-    tableBody:        $('worker-table-body'),
-    searchInput:      $('search-workers'),
-    filterSelect:     $('filter-risk'),
-    toggleSim:        $('toggle-simulation'),
-    btnReset:         $('btn-reset-data'),
-    valMonitored:     $('val-monitored'),
-    valApproved:      $('val-approved-tools'),
-    valBlocked:       $('val-blocked'),
-    valAlerts:        $('val-alerts'),
-    cardAlerts:       $('card-alerts'),
-    alertDeltaText:   $('alert-delta-text'),
-    sidebarBadge:     $('sidebar-badge'),
-    logContainer:     $('log-container'),
+    tableBody: $('worker-table-body'),
+    searchInput: $('search-workers'),
+    filterSelect: $('filter-risk'),
+    toggleSim: $('toggle-simulation'),
+    btnReset: $('btn-reset-data'),
+    valMonitored: $('val-monitored'),
+    valApproved: $('val-approved-tools'),
+    valBlocked: $('val-blocked'),
+    valAlerts: $('val-alerts'),
+    cardAlerts: $('card-alerts'),
+    alertDeltaText: $('alert-delta-text'),
+    sidebarBadge: $('sidebar-badge'),
+    logContainer: $('log-container'),
 
     // Inspector
-    deptPlaceholder:  $('dept-placeholder'),
-    deptContent:      $('dept-content'),
-    inspectName:      $('inspect-name'),
-    inspectRisk:      $('inspect-risk-badge'),
-    inspectUsers:     $('inspect-users'),
-    inspectUploads:   $('inspect-uploads'),
-    inspectBlocked:   $('inspect-blocked'),
-    inspectAlerts:    $('inspect-alerts'),
-    inspectTools:     $('inspect-tools'),
+    deptPlaceholder: $('dept-placeholder'),
+    deptContent: $('dept-content'),
+    inspectName: $('inspect-name'),
+    inspectRisk: $('inspect-risk-badge'),
+    inspectUsers: $('inspect-users'),
+    inspectUploads: $('inspect-uploads'),
+    inspectBlocked: $('inspect-blocked'),
+    inspectAlerts: $('inspect-alerts'),
+    inspectTools: $('inspect-tools'),
     inspectCompliance: $('inspect-compliance'),
     inspectPolicyNote: $('inspect-policy-note'),
 
     // Modal
-    modal:            $('risk-modal'),
-    btnCloseModal:    $('btn-close-modal'),
-    btnDismiss:       $('btn-modal-dismiss'),
-    btnWarn:          $('btn-modal-warn'),
-    btnBlock:         $('btn-modal-block'),
-    modalAvatar:      $('modal-avatar'),
-    modalName:        $('modal-name'),
-    modalDept:        $('modal-dept'),
-    modalIp:          $('modal-ip'),
-    modalTool:        $('modal-tool'),
-    modalFiletype:    $('modal-filetype'),
-    modalDatatype:    $('modal-datatype'),
-    modalRiskScore:   $('modal-risk-score'),
-    modalTags:        $('modal-detected-tags')
+    modal: $('risk-modal'),
+    btnCloseModal: $('btn-close-modal'),
+    btnDismiss: $('btn-modal-dismiss'),
+    btnWarn: $('btn-modal-warn'),
+    btnBlock: $('btn-modal-block'),
+    modalAvatar: $('modal-avatar'),
+    modalName: $('modal-name'),
+    modalDept: $('modal-dept'),
+    modalIp: $('modal-ip'),
+    modalTool: $('modal-tool'),
+    modalFiletype: $('modal-filetype'),
+    modalDatatype: $('modal-datatype'),
+    modalRiskScore: $('modal-risk-score'),
+    modalTags: $('modal-detected-tags')
 };
 
 // ─────────────────────────────────────────────────────────────────────
@@ -352,7 +352,7 @@ function bindEvents() {
 // TOOLTIP — JS-driven positioning (avoids overflow clipping)
 // ─────────────────────────────────────────────────────────────────────
 function bindTooltip() {
-    const card    = document.getElementById('card-blocked');
+    const card = document.getElementById('card-blocked');
     const tooltip = document.getElementById('blocked-files-tooltip');
     if (!card || !tooltip) return;
 
@@ -365,7 +365,7 @@ function bindTooltip() {
         // Clamp so it doesn't go off-screen
         left = Math.max(8, Math.min(left, window.innerWidth - tooltip.offsetWidth - 8));
         tooltip.style.left = left + 'px';
-        tooltip.style.top  = (rect.bottom + window.scrollY + 10) + 'px';
+        tooltip.style.top = (rect.bottom + window.scrollY + 10) + 'px';
     });
 
     card.addEventListener('mouseleave', (e) => {
@@ -450,9 +450,9 @@ function showDeptDetails(name) {
             <div class="tool-progress-info">
                 <span class="tool-name">
                     ${t.approved
-                        ? `<i data-lucide="check-circle" style="width:12px;height:12px;color:#10b981;display:inline;vertical-align:middle;"></i>`
-                        : `<i data-lucide="alert-triangle" style="width:12px;height:12px;color:#f59e0b;display:inline;vertical-align:middle;"></i>`
-                    }
+            ? `<i data-lucide="check-circle" style="width:12px;height:12px;color:#10b981;display:inline;vertical-align:middle;"></i>`
+            : `<i data-lucide="alert-triangle" style="width:12px;height:12px;color:#f59e0b;display:inline;vertical-align:middle;"></i>`
+        }
                     ${t.name}
                     ${!t.approved ? '<span class="undefined-tag">Undefined</span>' : ''}
                 </span>
@@ -471,7 +471,7 @@ function showDeptDetails(name) {
 // WORKER TABLE RENDERER
 // ─────────────────────────────────────────────────────────────────────
 function renderTable() {
-    const query  = dom.searchInput.value.toLowerCase();
+    const query = dom.searchInput.value.toLowerCase();
     const filter = dom.filterSelect.value;
 
     // Sort: high risk (undefined AI tool alerts) float to top
@@ -486,9 +486,9 @@ function renderTable() {
         const matchQ = [worker.name, worker.dept, worker.tool, worker.file]
             .join(' ').toLowerCase().includes(query);
         const matchF = filter === 'all'
-            || (filter === 'high'   && worker.riskLevel === 'high')
+            || (filter === 'high' && worker.riskLevel === 'high')
             || (filter === 'medium' && worker.riskLevel === 'medium')
-            || (filter === 'low'    && worker.riskLevel === 'low');
+            || (filter === 'low' && worker.riskLevel === 'low');
 
         if (!matchQ || !matchF) return;
 
@@ -499,7 +499,7 @@ function renderTable() {
 
         // Risk score colour
         let riskClass = 'risk-low';
-        if (worker.riskLevel === 'high')   riskClass = 'risk-high';
+        if (worker.riskLevel === 'high') riskClass = 'risk-high';
         if (worker.riskLevel === 'medium') riskClass = 'risk-med';
 
         // Action button
@@ -568,11 +568,12 @@ function renderTable() {
 // ─────────────────────────────────────────────────────────────────────
 function updateCounters() {
     const alertCount = workers.filter(w => w.riskLevel === 'high').length;
+    const blockedCount = workers.filter(w => w.uploadStatus.startsWith('Blocked') || w.uploadStatus === 'Access Restricted').length;
 
     dom.valMonitored.innerText = liveSummary?.monitored_employees ?? 148;
     dom.valApproved.innerText = liveSummary?.approved_tools ?? 7;
-    dom.valBlocked.innerText = liveSummary?.blocked_today ?? totalBlocked;
-    dom.valAlerts.innerText = liveSummary?.undefined_alerts ?? alertCount;
+    dom.valBlocked.innerText = blockedCount;
+    dom.valAlerts.innerText = alertCount;
 
     if (alertCount > 0) {
         dom.cardAlerts.classList.add('active');
@@ -617,8 +618,8 @@ function updateBlockedTooltip() {
 // ─────────────────────────────────────────────────────────────────────
 function nowTimestamp() {
     const d = new Date(Date.now() + timeOffset);
-    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    const pad = n => String(n).padStart(2,'0');
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const pad = n => String(n).padStart(2, '0');
     return `${pad(d.getDate())} ${months[d.getMonth()]} ${d.getFullYear()}, ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
@@ -642,7 +643,7 @@ function addLog(msg, type = 'system') {
 // ─────────────────────────────────────────────────────────────────────
 // MODAL
 // ─────────────────────────────────────────────────────────────────────
-window.openModal = function(id) {
+window.openModal = function (id) {
     const w = workers.find(x => x.id === id);
     if (!w) return;
 
@@ -675,41 +676,68 @@ function handleDismiss() {
     closeModal();
 }
 
-function handleWarn() {
+async function handleWarn() {
     const id = dom.modal.dataset.workerId;
     const w = workers.find(x => x.id === id);
     if (w) {
-        w.riskLevel = 'medium';
-        w.uploadStatus = 'Warning Issued';
-        w.riskScore = Math.max(w.riskScore - 20, 40);
-        addLog(`Compliance warning sent to ${w.name} regarding use of undefined AI tool: ${w.tool}.`, "system");
-        departments[w.dept] && (departments[w.dept].alerts = Math.max(0, departments[w.dept].alerts - 1));
+        try {
+            await fetch(`${API_BASE_URL}/live-detections/action`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: w.name, action: 'warn' })
+            });
+            w.riskLevel = 'medium';
+            w.uploadStatus = 'Warning Issued';
+            w.riskScore = Math.max(w.riskScore - 20, 40);
+            addLog(`Compliance warning sent to ${w.name} regarding use of undefined AI tool: ${w.tool}.`, "system");
+            departments[w.dept] && (departments[w.dept].alerts = Math.max(0, departments[w.dept].alerts - 1));
+        } catch (e) {
+            console.error('Failed to update warning on backend:', e);
+        }
     }
     closeModal();
     renderTable();
     updateCounters();
 }
 
-function handleBlock() {
+async function handleBlock() {
     const id = dom.modal.dataset.workerId;
     const w = workers.find(x => x.id === id);
     if (w) {
-        w.riskLevel = 'low';
-        w.uploadStatus = 'Access Restricted';
-        w.riskScore = 0;
-        addLog(`[ACCESS RESTRICTED] Worker ${w.name} blocked from all AI tool uploads pending HR review.`, "threat");
-        departments[w.dept] && (departments[w.dept].alerts = Math.max(0, departments[w.dept].alerts - 1));
+        try {
+            await fetch(`${API_BASE_URL}/live-detections/action`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: w.name, action: 'block' })
+            });
+            w.riskLevel = 'low';
+            w.uploadStatus = 'Access Restricted';
+            w.riskScore = 0;
+            addLog(`[ACCESS RESTRICTED] Worker ${w.name} blocked from all AI tool uploads pending HR review.`, "threat");
+            departments[w.dept] && (departments[w.dept].alerts = Math.max(0, departments[w.dept].alerts - 1));
+        } catch (e) {
+            console.error('Failed to update block on backend:', e);
+        }
     }
     closeModal();
     renderTable();
     updateCounters();
 }
 
-window.warnWorker = function(id) {
+window.warnWorker = async function (id) {
     const w = workers.find(x => x.id === id);
     if (!w) return;
-    w.uploadStatus = 'Warning Issued';
-    addLog(`Warning sent to ${w.name} for activity on ${w.tool}.`, "system");
+    try {
+        await fetch(`${API_BASE_URL}/live-detections/action`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: w.name, action: 'warn' })
+        });
+        w.uploadStatus = 'Warning Issued';
+        addLog(`Warning sent to ${w.name} for activity on ${w.tool}.`, "system");
+    } catch (e) {
+        console.error('Failed to update warning on backend:', e);
+    }
     renderTable();
     updateCounters();
 };
@@ -718,10 +746,10 @@ window.warnWorker = function(id) {
 // SIMULATION — Random safe uploads + periodic undefined AI tool alerts
 // ─────────────────────────────────────────────────────────────────────
 const safeActivities = [
-    { dept: "Engineering",    tool: "GitHub Copilot",       approved: true,  file: "utils_helper.js",         msg: "[ALLOWED] Engineering upload to GitHub Copilot — no confidential content detected." },
-    { dept: "Sales",          tool: "ChatGPT Enterprise",  approved: true,  file: "client_email_draft.docx", msg: "[ALLOWED] Sales upload to ChatGPT Enterprise — content cleared." },
-    { dept: "Human Resources",tool: "ChatGPT Enterprise",  approved: true,  file: "policy_update.docx",      msg: "[ALLOWED] HR upload to ChatGPT Enterprise — no sensitive data found." },
-    { dept: "Marketing",      tool: "Midjourney (Approved)",approved: true, file: "ad_banner_prompt.txt",    msg: "[ALLOWED] Marketing upload to Midjourney — safe content." },
+    { dept: "Engineering", tool: "GitHub Copilot", approved: true, file: "utils_helper.js", msg: "[ALLOWED] Engineering upload to GitHub Copilot — no confidential content detected." },
+    { dept: "Sales", tool: "ChatGPT Enterprise", approved: true, file: "client_email_draft.docx", msg: "[ALLOWED] Sales upload to ChatGPT Enterprise — content cleared." },
+    { dept: "Human Resources", tool: "ChatGPT Enterprise", approved: true, file: "policy_update.docx", msg: "[ALLOWED] HR upload to ChatGPT Enterprise — no sensitive data found." },
+    { dept: "Marketing", tool: "Midjourney (Approved)", approved: true, file: "ad_banner_prompt.txt", msg: "[ALLOWED] Marketing upload to Midjourney — safe content." },
 ];
 
 async function fetchBackendDetections() {
@@ -791,7 +819,7 @@ function simulateSafeUpload() {
 
 function simulateUndefinedAIAlert() {
     const template = simulationPool[Math.floor(Math.random() * simulationPool.length)];
-    
+
     // Check if worker is already in the list
     const existing = workers.find(w => w.name === template.name);
     if (existing) {
@@ -824,7 +852,7 @@ function resetDashboard() {
     });
 
     Object.keys(departments).forEach(k => {
-        departments[k].risk = ['Marketing','Finance'].includes(k)
+        departments[k].risk = ['Marketing', 'Finance'].includes(k)
             ? (k === 'Finance' ? "High Risk" : "Medium Risk")
             : "Low Risk";
         departments[k].riskClass = ['Finance'].includes(k)
