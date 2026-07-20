@@ -344,9 +344,11 @@ function bindEvents() {
     if (btnClosePoliciesFooter) btnClosePoliciesFooter.addEventListener('click', closePoliciesModal);
 
     // ── Agent Tester Modal Listeners ──
+    const btnOpenAgent = $('btn-open-agent-tester');
     const btnCloseAgent = $('btn-close-agent-modal');
     const btnCancelAgent = $('btn-cancel-agent');
     const btnRunScan = $('btn-run-agent-scan');
+    if (btnOpenAgent) btnOpenAgent.addEventListener('click', openAgentModal);
     if (btnCloseAgent) btnCloseAgent.addEventListener('click', closeAgentModal);
     if (btnCancelAgent) btnCancelAgent.addEventListener('click', closeAgentModal);
     if (btnRunScan) btnRunScan.addEventListener('click', runAgentPreUploadScan);
@@ -951,7 +953,7 @@ function closeAgentModal() {
     if (aModal) aModal.classList.add('hidden');
 }
 
-function runAgentPreUploadScan() {
+async function runAgentPreUploadScan() {
     const toolVal = $('agent-tool-select').value;
     const fileVal = $('agent-file-select').value;
 
@@ -967,6 +969,21 @@ function runAgentPreUploadScan() {
 
     const ip = MY_TEST_IP || '10.0.12.99';
 
+    // Telemetry to backend API
+    try {
+        await fetch(`${API_BASE_URL}/live-detections/scan`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                ip: ip,
+                tool: toolName,
+                file: fileName,
+                fileType: fileType,
+                dataFound: isConfidential || !isToolApproved ? [fileDataFound] : []
+            })
+        });
+    } catch (e) { }
+
     if (!isToolApproved || isConfidential) {
         // Pre-Upload Interception Triggered (0 Bytes Sent)
         resultBox.className = 'dept-placeholder threat-active';
@@ -978,7 +995,7 @@ function runAgentPreUploadScan() {
 
         const newWorker = {
             id: 'agent-' + Date.now(),
-            name: "Agent Scan (IP: " + ip + ")",
+            name: "Workstation (" + ip + ")",
             dept: "Engineering",
             tool: toolName,
             toolApproved: isToolApproved,
@@ -1001,7 +1018,7 @@ function runAgentPreUploadScan() {
             departments["Engineering"].riskClass = "badge-danger";
         }
 
-        addLog(`[PRE-UPLOAD BLOCK] Endpoint Agent AI blocked <strong>${fileName}</strong> on <strong>${toolName}</strong> at workstation IP ${ip}. 0 Bytes sent to AI.`, "threat");
+        addLog(`[PRE-UPLOAD BLOCK] Endpoint Agent AI blocked <strong>${fileName}</strong> on unapproved tool: <strong>${toolName}</strong> at workstation IP ${ip}. 0 Bytes sent to AI.`, "threat");
     } else {
         // Allowed Upload
         resultBox.className = 'dept-placeholder';
@@ -1013,7 +1030,7 @@ function runAgentPreUploadScan() {
 
         const newWorker = {
             id: 'agent-' + Date.now(),
-            name: "Agent Scan (IP: " + ip + ")",
+            name: "Workstation (" + ip + ")",
             dept: "Engineering",
             tool: toolName,
             toolApproved: true,
