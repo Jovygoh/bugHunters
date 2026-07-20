@@ -304,6 +304,10 @@ function bindEvents() {
     const navItems = document.querySelectorAll('#sidebar-nav .nav-item');
     navItems.forEach(item => {
         item.addEventListener('click', (e) => {
+            const href = item.getAttribute('href');
+            if (href && href !== '#' && !href.startsWith('#')) {
+                return; // Let browser navigate naturally to manager.html / new-ai.html
+            }
             e.preventDefault();
             navItems.forEach(n => n.classList.remove('active'));
             item.classList.add('active');
