@@ -684,12 +684,12 @@ async function handleWarn() {
             await fetch(`${API_BASE_URL}/live-detections/action`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: w.name, action: 'warn' })
+                body: JSON.stringify({ name: w.name, ip: w.ip, action: 'warn' })
             });
             w.riskLevel = 'medium';
             w.uploadStatus = 'Warning Issued';
             w.riskScore = Math.max(w.riskScore - 20, 40);
-            addLog(`Compliance warning sent to ${w.name} regarding use of undefined AI tool: ${w.tool}.`, "system");
+            addLog(`Compliance warning sent to ${w.name} (${w.ip}) regarding use of undefined AI tool: ${w.tool}.`, "system");
             departments[w.dept] && (departments[w.dept].alerts = Math.max(0, departments[w.dept].alerts - 1));
         } catch (e) {
             console.error('Failed to update warning on backend:', e);
@@ -708,12 +708,12 @@ async function handleBlock() {
             await fetch(`${API_BASE_URL}/live-detections/action`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: w.name, action: 'block' })
+                body: JSON.stringify({ name: w.name, ip: w.ip, action: 'block' })
             });
             w.riskLevel = 'low';
             w.uploadStatus = 'Access Restricted';
             w.riskScore = 0;
-            addLog(`[ACCESS RESTRICTED] Worker ${w.name} blocked from all AI tool uploads pending HR review.`, "threat");
+            addLog(`[ACCESS RESTRICTED] Worker ${w.name} (IP: ${w.ip}) blocked from all AI tool uploads pending HR review.`, "threat");
             departments[w.dept] && (departments[w.dept].alerts = Math.max(0, departments[w.dept].alerts - 1));
         } catch (e) {
             console.error('Failed to update block on backend:', e);
@@ -731,10 +731,10 @@ window.warnWorker = async function (id) {
         await fetch(`${API_BASE_URL}/live-detections/action`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: w.name, action: 'warn' })
+            body: JSON.stringify({ name: w.name, ip: w.ip, action: 'warn' })
         });
         w.uploadStatus = 'Warning Issued';
-        addLog(`Warning sent to ${w.name} for activity on ${w.tool}.`, "system");
+        addLog(`Warning sent to ${w.name} (${w.ip}) for activity on ${w.tool}.`, "system");
     } catch (e) {
         console.error('Failed to update warning on backend:', e);
     }

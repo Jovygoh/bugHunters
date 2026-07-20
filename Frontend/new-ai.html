@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Chat & Ask AI - Next-Gen AI Workspace Client with Real-Time Governance Endpoint Monitoring">
+    <title>Chat & Ask AI | AI Models & Tools</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        body {
+            background-color: #06080d;
+            color: #ececec;
+            font-family: 'Outfit', sans-serif;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+        }
+
+        .chat-app-container {
+            display: flex;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        /* Dark Chat Sidebar */
+        .chat-sidebar {
+            width: 260px;
+            background: #090d14;
+            border-right: 1px solid rgba(255, 255, 255, 0.06);
+            display: flex;
+            flex-direction: column;
+            padding: 16px 14px;
+            gap: 20px;
+            user-select: none;
+        }
+
+        .chat-sidebar-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-weight: 700;
+            font-size: 1.05rem;
+            color: #fff;
+        }
+
+        .btn-new-chat {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #fff;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 0.88rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: background 0.2s;
+        }
+
+        .btn-new-chat:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .sidebar-section-title {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #6b7280;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .sidebar-menu-list {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .sidebar-menu-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 9px 12px;
+            border-radius: 8px;
+            color: #9ca3af;
+            font-size: 0.88rem;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .sidebar-menu-item:hover, .sidebar-menu-item.active {
+            background: rgba(255, 255, 255, 0.06);
+            color: #fff;
+        }
+
+        .sidebar-menu-item i {
+            width: 16px;
+            height: 16px;
+        }
+
+        /* Main Chat Canvas */
+        .chat-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            position: relative;
+            background: radial-gradient(circle at 50% 30%, rgba(15, 23, 42, 0.8) 0%, #06080d 70%);
+        }
+
+        .governance-telemetry-banner {
+            position: absolute;
+            top: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(13, 20, 32, 0.85);
+            border: 1px solid rgba(0, 240, 255, 0.2);
+            backdrop-filter: blur(10px);
+            padding: 8px 18px;
+            border-radius: 30px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 0.82rem;
+            color: var(--muted);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            z-index: 100;
+        }
+
+        .governance-telemetry-banner strong {
+            color: #00f0ff;
+            font-family: var(--mono);
+        }
+
+        .chat-hero-logo {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 16px;
+            color: #00f0ff;
+            filter: drop-shadow(0 0 16px rgba(0, 240, 255, 0.4));
+        }
+
+        .chat-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 24px;
+        }
+
+        /* Model selector pills */
+        .model-pills-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 800px;
+        }
+
+        .model-pill {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 8px 16px;
+            font-size: 0.85rem;
+            color: #9ca3af;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .model-pill:hover, .model-pill.active {
+            background: rgba(0, 240, 255, 0.15);
+            border-color: #00f0ff;
+            color: #fff;
+        }
+
+        .model-pill.unapproved-pill {
+            border-color: rgba(245, 158, 11, 0.4);
+        }
+
+        .model-pill.unapproved-pill.active {
+            background: rgba(245, 158, 11, 0.2);
+            border-color: #f59e0b;
+            color: #fbbf24;
+        }
+
+        /* Input Container matching screenshot */
+        .prompt-input-card {
+            width: 100%;
+            max-width: 760px;
+            background: rgba(18, 24, 38, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 18px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+            transition: border-color 0.2s;
+        }
+
+        .prompt-input-card:focus-within {
+            border-color: rgba(0, 240, 255, 0.4);
+        }
+
+        .prompt-textarea {
+            width: 100%;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: #fff;
+            font-family: inherit;
+            font-size: 1rem;
+            resize: none;
+            min-height: 54px;
+        }
+
+        .prompt-actions-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .prompt-action-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn-prompt-icon {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: #9ca3af;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-prompt-icon:hover {
+            background: rgba(255, 255, 255, 0.12);
+            color: #fff;
+        }
+
+        .prompt-action-pill {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 6px 12px;
+            font-size: 0.8rem;
+            color: #9ca3af;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: background 0.2s;
+        }
+
+        .prompt-action-pill:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+        }
+
+        .btn-send-prompt {
+            background: #fff;
+            color: #06080d;
+            border: none;
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-weight: 700;
+            transition: transform 0.2s, background 0.2s;
+        }
+
+        .btn-send-prompt:hover {
+            background: #00f0ff;
+            transform: scale(1.05);
+        }
+
+        /* Interception & IP restriction alerts */
+        .response-output-box {
+            width: 100%;
+            max-width: 760px;
+            margin-top: 20px;
+            border-radius: 14px;
+            padding: 18px 22px;
+            font-size: 0.9rem;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .response-output-box.blocked {
+            background: rgba(255, 51, 102, 0.12);
+            border: 1px solid rgba(255, 51, 102, 0.4);
+            color: #ff6688;
+        }
+
+        .response-output-box.ip-restricted {
+            background: rgba(239, 68, 68, 0.2);
+            border: 2px solid #ef4444;
+            color: #fca5a5;
+        }
+
+        .response-output-box.allowed {
+            background: rgba(16, 185, 129, 0.12);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #6ee7b7;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="chat-app-container">
+
+        <!-- Sidebar -->
+        <aside class="chat-sidebar">
+            <div class="chat-sidebar-header">
+                <span>Chat & Ask AI</span>
+                <i data-lucide="panel-left-close" style="cursor:pointer;width:18px;height:18px;color:#9ca3af;"></i>
+            </div>
+
+            <button class="btn-new-chat">
+                <i data-lucide="square-plus"></i>
+                <span>New Chat</span>
+            </button>
+
+            <div class="sidebar-section-title">
+                <span>Explore AI Models</span>
+                <i data-lucide="external-link" style="width:12px;height:12px;"></i>
+            </div>
+            <div class="sidebar-menu-list">
+                <div class="sidebar-menu-item active" onclick="selectModelPill('Gemini 3.1 Pro', true)">
+                    <i data-lucide="sparkles" style="color:#00f0ff;"></i>
+                    <span>Gemini 3.1 Pro</span>
+                </div>
+                <div class="sidebar-menu-item" onclick="selectModelPill('Claude Sonnet 5', true)">
+                    <i data-lucide="sun" style="color:#f59e0b;"></i>
+                    <span>Claude Sonnet 5</span>
+                </div>
+                <div class="sidebar-menu-item" onclick="selectModelPill('Perplexity', false)">
+                    <i data-lucide="globe" style="color:#a855f7;"></i>
+                    <span>Perplexity</span>
+                </div>
+            </div>
+
+            <div class="sidebar-section-title" style="margin-top:10px;">
+                <span>Explore AI Tools</span>
+                <i data-lucide="external-link" style="width:12px;height:12px;"></i>
+            </div>
+            <div class="sidebar-menu-list">
+                <div class="sidebar-menu-item" onclick="selectModelPill('Phind.com', false)">
+                    <i data-lucide="code"></i>
+                    <span>Phind.com (Shadow AI)</span>
+                </div>
+                <div class="sidebar-menu-item" onclick="selectModelPill('ChatPDF.com', false)">
+                    <i data-lucide="file-text"></i>
+                    <span>ChatPDF.com (Shadow AI)</span>
+                </div>
+                <div class="sidebar-menu-item" onclick="selectModelPill('Writesonic.com', false)">
+                    <i data-lucide="pen-tool"></i>
+                    <span>Writesonic.com</span>
+                </div>
+            </div>
+
+            <div style="margin-top:auto;display:flex;flex-direction:column;gap:8px;">
+                <a href="manager.html" class="sidebar-menu-item" style="color:#00f0ff;background:rgba(0,240,255,0.08);border:1px solid rgba(0,240,255,0.2);">
+                    <i data-lucide="user-check"></i>
+                    <span>Manager Approval Portal</span>
+                </a>
+                <a href="index.html" class="sidebar-menu-item" style="color:#9ca3af;">
+                    <i data-lucide="arrow-left"></i>
+                    <span>Governance Dashboard</span>
+                </a>
+            </div>
+        </aside>
+
+        <!-- Main Chat Content -->
+        <main class="chat-main">
+
+            <!-- Governance Telemetry Indicator Bar -->
+            <div class="governance-telemetry-banner">
+                <div class="status-indicator online"></div>
+                <span>BugHunters AI Governance active &middot; Workstation IP: <strong id="chat-user-ip">183.x.x.x</strong></span>
+                <span class="badge badge-success" id="chat-ip-status-badge">🟢 IP Clean</span>
+            </div>
+
+            <div class="chat-hero-logo">
+                <i data-lucide="atom" style="width:64px;height:64px;"></i>
+            </div>
+
+            <h1 class="chat-title">How can I help you today?</h1>
+
+            <!-- Model Selection Pills -->
+            <div class="model-pills-container" id="model-pills">
+                <div class="model-pill active" onclick="selectModelPill('Grok 4.3', true, this)">
+                    <i data-lucide="check-circle-2" style="width:14px;height:14px;color:#10b981;"></i>
+                    <span>Grok 4.3</span>
+                </div>
+                <div class="model-pill" onclick="selectModelPill('GPT-5.4 Nano', true, this)">
+                    <i data-lucide="check-circle-2" style="width:14px;height:14px;color:#10b981;"></i>
+                    <span>GPT-5.4 Nano</span>
+                </div>
+                <div class="model-pill" onclick="selectModelPill('GPT-5.3 Instant', true, this)">
+                    <i data-lucide="check-circle-2" style="width:14px;height:14px;color:#10b981;"></i>
+                    <span>GPT-5.3 Instant</span>
+                </div>
+                <div class="model-pill" onclick="selectModelPill('Gemini 3.1 Pro', true, this)">
+                    <i data-lucide="check-circle-2" style="width:14px;height:14px;color:#10b981;"></i>
+                    <span>Gemini 3.1 Pro</span>
+                </div>
+                <div class="model-pill unapproved-pill" onclick="selectModelPill('Phind.com', false, this)">
+                    <i data-lucide="alert-triangle" style="width:14px;height:14px;color:#f59e0b;"></i>
+                    <span>Phind.com (Shadow AI)</span>
+                </div>
+                <div class="model-pill unapproved-pill" onclick="selectModelPill('ChatPDF.com', false, this)">
+                    <i data-lucide="alert-triangle" style="width:14px;height:14px;color:#f59e0b;"></i>
+                    <span>ChatPDF.com (Shadow AI)</span>
+                </div>
+            </div>
+
+            <!-- Prompt Input Card -->
+            <div class="prompt-input-card">
+                <textarea id="prompt-input" class="prompt-textarea" placeholder="Message or search prompt... (e.g., refactor auth code or summarize salary matrix)"></textarea>
+
+                <div class="prompt-actions-bar">
+                    <div class="prompt-action-left">
+                        <label class="btn-prompt-icon" title="Attach file to scan">
+                            <i data-lucide="paperclip" style="width:18px;height:18px;"></i>
+                            <input type="file" id="file-attachment" style="display:none;" onchange="handleFileSelected(this)">
+                        </label>
+                        <span id="attached-filename-label" style="font-size:0.8rem;color:#00f0ff;display:none;"></span>
+
+                        <div class="prompt-action-pill">
+                            <i data-lucide="image" style="width:14px;height:14px;"></i>
+                            <span>Create Image</span>
+                        </div>
+                        <div class="prompt-action-pill">
+                            <i data-lucide="telescope" style="width:14px;height:14px;"></i>
+                            <span>Deep Research</span>
+                        </div>
+                    </div>
+
+                    <button class="btn-send-prompt" id="btn-send-chat" onclick="submitChatPrompt()">
+                        <i data-lucide="arrow-up" style="width:20px;height:20px;"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Output / Interception Box -->
+            <div id="response-output" class="response-output-box hidden"></div>
+
+        </main>
+    </div>
+
+    <script src="new-ai.js"></script>
+</body>
+</html>

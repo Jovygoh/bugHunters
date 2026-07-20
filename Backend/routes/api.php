@@ -181,14 +181,20 @@ Route::get('live-detections', function() {
         }
     }
 
+    // Dynamic Approved Tools list cached for governance
+    $approvedTools = \Illuminate\Support\Facades\Cache::get('approved_tools_list', [
+        'GitHub Copilot', 'ChatGPT Enterprise', 'Claude Team', 'Midjourney (Approved)', 'Llama-3 (Local)', 'Gemini 3.1 Pro', 'Claude Sonnet 5'
+    ]);
+
     return response()->json([
         'status' => 'success',
         'timestamp' => now()->toIso8601String(),
         'summary' => [
             'monitored_employees' => 148,
-            'approved_tools' => 7,
-            'blocked_today' => collect($detections)->filter(fn($d) => str_starts_with($d['uploadStatus'], 'Blocked'))->count(),
-            'undefined_alerts' => collect($detections)->filter(fn($d) => $d['riskLevel'] === 'high')->count()
+            'approved_tools' => count($approvedTools),
+            'approved_tools_list' => $approvedTools,
+            'blocked_today' => collect($detections)->filter(fn($d) => str_starts_with($d['uploadStatus'] ?? '', 'Blocked'))->count(),
+            'undefined_alerts' => collect($detections)->filter(fn($d) => ($d['riskLevel'] ?? '') === 'high')->count()
         ],
         'detections' => $detections
     ]);
@@ -196,23 +202,43 @@ Route::get('live-detections', function() {
 
 Route::post('live-detections/action', function(Illuminate\Http\Request $request) {
     $workerName = $request->input('name');
+    $ip = $request->input('ip');
     $action = $request->input('action');
     
     $detections = \Illuminate\Support\Facades\Cache::get('live_detections', []);
-    
-    // If not initialized, pull the defaults
     if (empty($detections)) {
-        // Simple trick: trigger a GET to populate the cache, then reload
         app()->handle(Illuminate\Http\Request::create('/api/live-detections', 'GET'));
         $detections = \Illuminate\Support\Facades\Cache::get('live_detections', []);
     }
     
+    // Manage IP restricted map in Cache
+    $restrictedIps = \Illuminate\Support\Facades\Cache::get('restricted_ips', []);
+    
+    if ($ip) {
+        if ($action === 'block') {
+            $restrictedIps[$ip] = [
+                'status' => 'restricted',
+                'reason' => 'Access Restricted by Manager',
+                'updated_at' => now()->toIso8601String()
+            ];
+        } elseif ($action === 'warn') {
+            $restrictedIps[$ip] = [
+                'status' => 'warning',
+                'reason' => 'Compliance Warning Issued',
+                'updated_at' => now()->toIso8601String()
+            ];
+        } elseif ($action === 'dismiss' || $action === 'allow') {
+            unset($restrictedIps[$ip]);
+        }
+        \Illuminate\Support\Facades\Cache::put('restricted_ips', $restrictedIps, 86400);
+    }
+    
     foreach ($detections as &$detection) {
-        if ($detection['name'] === $workerName) {
+        if (($workerName && ($detection['name'] ?? '') === $workerName) || ($ip && ($detection['ip'] ?? '') === $ip)) {
             if ($action === 'warn') {
                 $detection['riskLevel'] = 'medium';
                 $detection['uploadStatus'] = 'Warning Issued';
-                $detection['riskScore'] = max($detection['riskScore'] - 20, 40);
+                $detection['riskScore'] = max(($detection['riskScore'] ?? 80) - 20, 40);
             } elseif ($action === 'block') {
                 $detection['riskLevel'] = 'low';
                 $detection['uploadStatus'] = 'Access Restricted';
@@ -224,7 +250,177 @@ Route::post('live-detections/action', function(Illuminate\Http\Request $request)
     
     \Illuminate\Support\Facades\Cache::put('live_detections', $detections, 300);
     
-    return response()->json(['status' => 'success']);
+    return response()->json([
+        'status' => 'success',
+        'ip' => $ip,
+        'action' => $action,
+        'ip_restricted' => isset($restrictedIps[$ip]) && $restrictedIps[$ip]['status'] === 'restricted'
+    ]);
+});
+
+Route::post('live-detections/scan', function(Illuminate\Http\Request $request) {
+    $ip = $request->input('ip', $request->ip());
+    $tool = $request->input('tool', 'Unknown AI Tool');
+    $file = $request->input('file', 'search_query.txt');
+    $prompt = $request->input('prompt', '');
+    $dataFound = $request->input('dataFound', []);
+
+    // Check IP restriction status first
+    $restrictedIps = \Illuminate\Support\Facades\Cache::get('restricted_ips', []);
+    if (isset($restrictedIps[$ip]) && $restrictedIps[$ip]['status'] === 'restricted') {
+        return response()->json([
+            'status' => 'restricted',
+            'action' => 'blocked',
+            'message' => 'Workstation IP address has been restricted by Governance Policy.',
+            'ip' => $ip
+        ], 403);
+    }
+
+    $approvedTools = \Illuminate\Support\Facades\Cache::get('approved_tools_list', [
+        'GitHub Copilot', 'ChatGPT Enterprise', 'Claude Team', 'Midjourney (Approved)', 'Llama-3 (Local)', 'Gemini 3.1 Pro', 'Claude Sonnet 5'
+    ]);
+
+    $isApproved = false;
+    foreach ($approvedTools as $app) {
+        if (strcasecmp($app, $tool) === 0 || stripos($tool, str_replace([' (Approved)', ' (Whitelisted)', ' (Enterprise)', ' (Corporate)', ' (Local)'], '', $app)) !== false) {
+            $isApproved = true;
+            break;
+        }
+    }
+
+    $detections = \Illuminate\Support\Facades\Cache::get('live_detections', []);
+    if (empty($detections)) {
+        app()->handle(Illuminate\Http\Request::create('/api/live-detections', 'GET'));
+        $detections = \Illuminate\Support\Facades\Cache::get('live_detections', []);
+    }
+
+    if (!$isApproved || !empty($dataFound)) {
+        $newDetection = [
+            'id' => 'scan-' . time() . '-' . rand(100, 999),
+            'name' => 'Workstation (' . $ip . ')',
+            'dept' => $request->input('dept', 'Engineering'),
+            'tool' => $tool,
+            'toolApproved' => $isApproved,
+            'file' => $file,
+            'uploadStatus' => 'Blocked — Confidential',
+            'riskLevel' => 'high',
+            'riskScore' => $isApproved ? 75 : 92,
+            'ip' => $ip,
+            'date' => now()->format('d M Y, H:i'),
+            'fileType' => $request->input('fileType', 'Search Query / File'),
+            'dataFound' => !empty($dataFound) ? (array)$dataFound : ['Unapproved AI Tool Detection', 'Potential confidential search prompt'],
+            'prompt' => $prompt
+        ];
+
+        array_unshift($detections, $newDetection);
+        \Illuminate\Support\Facades\Cache::put('live_detections', $detections, 300);
+
+        return response()->json([
+            'status' => 'blocked',
+            'tool' => $tool,
+            'toolApproved' => $isApproved,
+            'ip' => $ip,
+            'detection' => $newDetection,
+            'message' => 'Upload / Search intercepted. 0 Bytes sent to unapproved AI tool.'
+        ]);
+    } else {
+        $allowedRecord = [
+            'id' => 'scan-' . time() . '-' . rand(100, 999),
+            'name' => 'Workstation (' . $ip . ')',
+            'dept' => $request->input('dept', 'Engineering'),
+            'tool' => $tool,
+            'toolApproved' => true,
+            'file' => $file,
+            'uploadStatus' => 'Allowed',
+            'riskLevel' => 'low',
+            'riskScore' => 10,
+            'ip' => $ip,
+            'date' => now()->format('d M Y, H:i'),
+            'fileType' => 'Safe Search Query',
+            'dataFound' => ['No confidential content detected'],
+            'prompt' => $prompt
+        ];
+
+        array_unshift($detections, $allowedRecord);
+        \Illuminate\Support\Facades\Cache::put('live_detections', $detections, 300);
+
+        return response()->json([
+            'status' => 'allowed',
+            'tool' => $tool,
+            'toolApproved' => true,
+            'ip' => $ip,
+            'message' => 'Search cleared by policy.'
+        ]);
+    }
+});
+
+Route::post('live-detections/approve-tool', function(Illuminate\Http\Request $request) {
+    $tool = $request->input('tool');
+    if (!$tool) {
+        return response()->json(['status' => 'error', 'message' => 'Tool name required'], 400);
+    }
+
+    $approvedTools = \Illuminate\Support\Facades\Cache::get('approved_tools_list', [
+        'GitHub Copilot', 'ChatGPT Enterprise', 'Claude Team', 'Midjourney (Approved)', 'Llama-3 (Local)', 'Gemini 3.1 Pro', 'Claude Sonnet 5'
+    ]);
+
+    if (!in_array($tool, $approvedTools)) {
+        $approvedTools[] = $tool;
+        \Illuminate\Support\Facades\Cache::put('approved_tools_list', $approvedTools, 86400);
+    }
+
+    // Update existing detections matching this tool
+    $detections = \Illuminate\Support\Facades\Cache::get('live_detections', []);
+    foreach ($detections as &$detection) {
+        if (strcasecmp($detection['tool'] ?? '', $tool) === 0 || stripos($detection['tool'] ?? '', $tool) !== false) {
+            $detection['toolApproved'] = true;
+            $detection['riskLevel'] = 'low';
+            $detection['uploadStatus'] = 'Approved by Manager';
+            $detection['riskScore'] = 12;
+        }
+    }
+    unset($detection);
+    \Illuminate\Support\Facades\Cache::put('live_detections', $detections, 300);
+
+    return response()->json([
+        'status' => 'success',
+        'message' => "AI Tool '{$tool}' has been approved and whitelisted by manager.",
+        'approved_tools' => $approvedTools
+    ]);
+});
+
+Route::post('live-detections/reject-tool', function(Illuminate\Http\Request $request) {
+    $tool = $request->input('tool');
+    if (!$tool) {
+        return response()->json(['status' => 'error', 'message' => 'Tool name required'], 400);
+    }
+
+    $approvedTools = \Illuminate\Support\Facades\Cache::get('approved_tools_list', []);
+    $approvedTools = array_values(array_filter($approvedTools, fn($t) => strcasecmp($t, $tool) !== 0));
+    \Illuminate\Support\Facades\Cache::put('approved_tools_list', $approvedTools, 86400);
+
+    return response()->json([
+        'status' => 'success',
+        'message' => "AI Tool '{$tool}' has been rejected and permanently blocked.",
+        'approved_tools' => $approvedTools
+    ]);
+});
+
+Route::get('live-detections/check-ip', function(Illuminate\Http\Request $request) {
+    $ip = $request->query('ip', $request->ip());
+    $restrictedIps = \Illuminate\Support\Facades\Cache::get('restricted_ips', []);
+    $approvedTools = \Illuminate\Support\Facades\Cache::get('approved_tools_list', [
+        'GitHub Copilot', 'ChatGPT Enterprise', 'Claude Team', 'Midjourney (Approved)', 'Llama-3 (Local)', 'Gemini 3.1 Pro', 'Claude Sonnet 5'
+    ]);
+
+    $ipStatus = $restrictedIps[$ip] ?? ['status' => 'clean', 'reason' => 'No active IP restrictions'];
+
+    return response()->json([
+        'status' => 'success',
+        'ip' => $ip,
+        'ip_policy_status' => $ipStatus,
+        'approved_tools' => $approvedTools
+    ]);
 });
 
 Route::get('bugs', function() {
@@ -233,4 +429,5 @@ Route::get('bugs', function() {
         'message' => 'BugHunters Backend API is online and actively scanning.'
     ]);
 });
+
 
