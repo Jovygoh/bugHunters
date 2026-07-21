@@ -263,9 +263,20 @@ Route::post('live-detections/scan', function(Illuminate\Http\Request $request) {
     $tool = $request->input('tool', 'Unknown AI Tool');
     $file = $request->input('file', 'search_query.txt');
     $prompt = $request->input('prompt', '');
-    $dataFound = $request->input('dataFound', []);
+    $inputDataFound = (array)$request->input('dataFound', []);
 
-    // Check IP restriction status first
+    // 1. Check persistent JSON Kill Switch for vulnerability-flagged models
+    $vulnService = new \App\Application\Incidents\Services\VulnerabilityMonitoringService();
+    if ($vulnService->isModelKilled($tool)) {
+        return response()->json([
+            'status' => 'model_killed',
+            'action' => 'blocked',
+            'message' => "AUTOMATIC KILL SWITCH ENGAGED: Model '{$tool}' is banned due to CVE vulnerability.",
+            'ip' => $ip
+        ], 403);
+    }
+
+    // 2. Check IP restriction status
     $restrictedIps = \Illuminate\Support\Facades\Cache::get('restricted_ips', []);
     if (isset($restrictedIps[$ip]) && $restrictedIps[$ip]['status'] === 'restricted') {
         return response()->json([
@@ -275,6 +286,12 @@ Route::post('live-detections/scan', function(Illuminate\Http\Request $request) {
             'ip' => $ip
         ], 403);
     }
+
+    // 3. Execute ReDoS-protected DLP scanning
+    $dlpService = new \App\Application\DataClassification\Services\DlpScannerService();
+    $dlpResult = $dlpService->scan($prompt . ' ' . $file);
+
+    $mergedCategories = array_unique(array_merge($inputDataFound, $dlpResult['detected_categories']));
 
     $approvedTools = \Illuminate\Support\Facades\Cache::get('approved_tools_list', [
         'GitHub Copilot', 'ChatGPT Enterprise', 'Claude Team', 'Midjourney (Approved)', 'Llama-3 (Local)', 'Gemini 3.1 Pro', 'Claude Sonnet 5'
@@ -294,7 +311,7 @@ Route::post('live-detections/scan', function(Illuminate\Http\Request $request) {
         $detections = \Illuminate\Support\Facades\Cache::get('live_detections', []);
     }
 
-    if (!$isApproved || !empty($dataFound)) {
+    if (!$isApproved || !empty($mergedCategories) || $dlpResult['has_sensitive_data']) {
         $newDetection = [
             'id' => 'scan-' . time() . '-' . rand(100, 999),
             'name' => 'Workstation (' . $ip . ')',
@@ -304,12 +321,13 @@ Route::post('live-detections/scan', function(Illuminate\Http\Request $request) {
             'file' => $file,
             'uploadStatus' => 'Blocked — Confidential',
             'riskLevel' => 'high',
-            'riskScore' => $isApproved ? 75 : 92,
+            'riskScore' => max($dlpResult['risk_score'], $isApproved ? 75 : 92),
             'ip' => $ip,
             'date' => now()->format('d M Y, H:i'),
-            'fileType' => $request->input('fileType', 'Search Query / File'),
-            'dataFound' => !empty($dataFound) ? (array)$dataFound : ['Unapproved AI Tool Detection', 'Potential confidential search prompt'],
-            'prompt' => $prompt
+            'fileType' => $request->input('fileType', 'Search Query / Payload'),
+            'dataFound' => !empty($mergedCategories) ? $mergedCategories : ['Unapproved Shadow AI Tool Detection'],
+            'masked_snippet' => $dlpResult['masked_content'],
+            'was_truncated' => $dlpResult['was_truncated_for_redos']
         ];
 
         array_unshift($detections, $newDetection);
@@ -320,8 +338,9 @@ Route::post('live-detections/scan', function(Illuminate\Http\Request $request) {
             'tool' => $tool,
             'toolApproved' => $isApproved,
             'ip' => $ip,
+            'dlp_verdict' => $dlpResult,
             'detection' => $newDetection,
-            'message' => 'Upload / Search intercepted. 0 Bytes sent to unapproved AI tool.'
+            'message' => 'Payload intercepted by DLP & Policy Engine. 0 Bytes sent to AI.'
         ]);
     } else {
         $allowedRecord = [
@@ -337,8 +356,7 @@ Route::post('live-detections/scan', function(Illuminate\Http\Request $request) {
             'ip' => $ip,
             'date' => now()->format('d M Y, H:i'),
             'fileType' => 'Safe Search Query',
-            'dataFound' => ['No confidential content detected'],
-            'prompt' => $prompt
+            'dataFound' => ['No confidential content detected']
         ];
 
         array_unshift($detections, $allowedRecord);
@@ -349,7 +367,7 @@ Route::post('live-detections/scan', function(Illuminate\Http\Request $request) {
             'tool' => $tool,
             'toolApproved' => true,
             'ip' => $ip,
-            'message' => 'Search cleared by policy.'
+            'message' => 'Payload cleared by enterprise policy.'
         ]);
     }
 });
@@ -369,7 +387,6 @@ Route::post('live-detections/approve-tool', function(Illuminate\Http\Request $re
         \Illuminate\Support\Facades\Cache::put('approved_tools_list', $approvedTools, 86400);
     }
 
-    // Update existing detections matching this tool
     $detections = \Illuminate\Support\Facades\Cache::get('live_detections', []);
     foreach ($detections as &$detection) {
         if (strcasecmp($detection['tool'] ?? '', $tool) === 0 || stripos($detection['tool'] ?? '', $tool) !== false) {
@@ -423,11 +440,108 @@ Route::get('live-detections/check-ip', function(Illuminate\Http\Request $request
     ]);
 });
 
+// ── TASK 2: Automated AI Tool Approval Workflow Endpoints ──
+Route::post('v1/ai-tools/request-approval', function(Illuminate\Http\Request $request) {
+    $service = new \App\Application\AiTools\Services\AiToolApprovalWorkflowService();
+    return response()->json($service->evaluateRequest($request->all()));
+});
+
+Route::get('v1/ai-tools/pending-requests', function() {
+    $service = new \App\Application\AiTools\Services\AiToolApprovalWorkflowService();
+    return response()->json([
+        'status' => 'success',
+        'pending_requests' => $service->getPendingRequests()
+    ]);
+});
+
+// ── TASK 3: Cross-Department Governance Analytics Endpoint (7-Day Shadow AI Surge) ──
+Route::get('v1/dashboard/governance-analytics', function() {
+    $days = ['6 Days Ago', '5 Days Ago', '4 Days Ago', '3 Days Ago', '2 Days Ago', 'Yesterday', 'Today'];
+    // 7-Day Surge data simulating sudden spike in Shadow AI usage
+    $surgeInterceptions = [3, 5, 8, 24, 42, 68, 85];
+    $approvedQueries = [120, 135, 128, 140, 145, 150, 162];
+
+    return response()->json([
+        'status' => 'success',
+        'analytics' => [
+            'surge_labels' => $days,
+            'shadow_ai_interceptions' => $surgeInterceptions,
+            'approved_ai_usage' => $approvedQueries,
+            'department_shadow_surge' => [
+                'Engineering' => 28,
+                'Finance' => 24,
+                'Marketing' => 18,
+                'Sales' => 10,
+                'Human Resources' => 5
+            ],
+            'top_unapproved_tools' => [
+                ['tool' => 'Phind.com', 'count' => 38, 'risk' => 'High'],
+                ['tool' => 'ChatPDF.com', 'count' => 29, 'risk' => 'High'],
+                ['tool' => 'Writesonic.com', 'count' => 14, 'risk' => 'High'],
+                ['tool' => 'AskAI.so', 'count' => 8, 'risk' => 'High']
+            ]
+        ]
+    ]);
+});
+
+// ── TASK 4: Risk Monitoring (Persistent JSON Kill Switch) & Appeal Endpoints ──
+Route::post('v1/vulnerability-check/simulate', function(Illuminate\Http\Request $request) {
+    $model = $request->input('model', 'Claude Fable 5');
+    $ip = $request->input('ip', $request->ip());
+    $service = new \App\Application\Incidents\Services\VulnerabilityMonitoringService();
+    return response()->json($service->simulateCheck($model, $ip));
+});
+
+Route::get('v1/vulnerability-check/status', function() {
+    $service = new \App\Application\Incidents\Services\VulnerabilityMonitoringService();
+    return response()->json([
+        'status' => 'success',
+        'active_kill_switches' => $service->getActiveKillSwitches()
+    ]);
+});
+
+Route::post('v1/vulnerability-check/revoke', function(Illuminate\Http\Request $request) {
+    $model = $request->input('model');
+    $service = new \App\Application\Incidents\Services\VulnerabilityMonitoringService();
+    $revoked = $service->revokeKillSwitch($model);
+    return response()->json([
+        'status' => $revoked ? 'success' : 'not_found',
+        'message' => $revoked ? "Kill switch for model '{$model}' revoked." : "Model '{$model}' was not active in kill switch."
+    ]);
+});
+
+Route::post('v1/incidents/appeal', function(Illuminate\Http\Request $request) {
+    $service = new \App\Application\Incidents\Services\VulnerabilityMonitoringService();
+    return response()->json($service->submitAppeal($request->all()));
+});
+
+Route::get('v1/incidents/appeals', function() {
+    $service = new \App\Application\Incidents\Services\VulnerabilityMonitoringService();
+    return response()->json([
+        'status' => 'success',
+        'appeals' => $service->getAppeals()
+    ]);
+});
+
+Route::post('v1/incidents/appeals/action', function(Illuminate\Http\Request $request) {
+    $appealId = $request->input('appeal_id');
+    $action = $request->input('action'); // 'approved' or 'denied'
+    $service = new \App\Application\Incidents\Services\VulnerabilityMonitoringService();
+    $updated = $service->updateAppealStatus($appealId, $action);
+
+    return response()->json([
+        'status' => $updated ? 'success' : 'error',
+        'appeal_id' => $appealId,
+        'action' => $action
+    ]);
+});
+
 Route::get('bugs', function() {
     return response()->json([
         'status' => 'success',
         'message' => 'BugHunters Backend API is online and actively scanning.'
     ]);
 });
+
 
 

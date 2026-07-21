@@ -381,8 +381,170 @@ async function updateIpAction(ip, action) {
     } catch (e) { }
 
     showToast(`IP Action '${action.toUpperCase()}' applied to workstation IP: ${ip}`, action === 'block' ? 'danger' : 'success');
+    renderPendingTools();
+    renderApprovedTools();
     renderIpTable();
+    loadKillSwitches();
+    loadAppeals();
     updateCounters();
+}
+
+async function submitFastAssessment(event) {
+    event.preventDefault();
+    const toolName = document.getElementById('survey-tool-name').value.trim();
+    const domain = document.getElementById('survey-domain').value.trim();
+    const q1 = document.getElementById('survey-q1').value === 'true';
+    const q2 = document.getElementById('survey-q2').value === 'true';
+    const q3 = document.getElementById('survey-q3').value === 'true';
+
+    try {
+        const res = await fetch(`${API_BASE_URL}/v1/ai-tools/request-approval`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                tool_name: toolName,
+                domain: domain,
+                stores_company_data: q1,
+                handles_pii_financial: q2,
+                enterprise_certified: q3,
+                requested_by: 'Connected Employee',
+                department: 'Engineering'
+            })
+        });
+
+        const data = await res.json();
+        if (data.status === 'approved') {
+            showToast(`⚡ FAST-PATH SUCCESS: '${toolName}' was AUTO-APPROVED instantly!`, 'success');
+            if (!approvedToolsList.includes(toolName)) approvedToolsList.push(toolName);
+        } else {
+            showToast(`HIGH-RISK ASSESSMENT: '${toolName}' routed to Manager Review Queue.`, 'warning');
+            initialPendingTools.unshift({
+                name: toolName,
+                domain: domain,
+                category: "Employee Survey Request",
+                riskLevel: "high",
+                riskScore: data.risk_score || 88,
+                detectedUsers: ["Employee Assessment"],
+                dataFound: ["High-Risk Assessment Flags"],
+                date: "Just now"
+            });
+        }
+    } catch (e) {
+        showToast(`Request for '${toolName}' submitted.`, 'info');
+    }
+
+    document.getElementById('fast-assessment-form').reset();
+    renderPendingTools();
+    renderApprovedTools();
+    updateCounters();
+    switchTab('pending');
+}
+
+async function triggerVulnerabilityKillSwitch() {
+    const model = document.getElementById('vuln-model-select').value;
+    try {
+        const res = await fetch(`${API_BASE_URL}/v1/vulnerability-check/simulate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ model: model, ip: currentClientIp })
+        });
+        const data = await res.json();
+        showToast(`🚨 KILL SWITCH ENGAGED: Model '${model}' banned and persisted to config/kill_switches.json!`, 'danger');
+    } catch (e) {
+        showToast(`Kill switch triggered for '${model}' (Local mode)`, 'danger');
+    }
+
+    loadKillSwitches();
+}
+
+async function loadKillSwitches() {
+    const container = document.getElementById('kill-switch-active-list');
+    if (!container) return;
+
+    try {
+        const res = await fetch(`${API_BASE_URL}/v1/vulnerability-check/status`);
+        if (res.ok) {
+            const data = await res.json();
+            const switches = data.active_kill_switches || [];
+
+            if (switches.length === 0) {
+                container.innerHTML = `<div style="font-size:0.85rem;color:var(--muted);padding:10px;">No active vulnerability kill switches persistent in JSON.</div>`;
+                return;
+            }
+
+            container.innerHTML = switches.map(s => `
+                <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);padding:12px 16px;border-radius:8px;margin-bottom:8px;">
+                    <div>
+                        <strong style="color:#ef4444;">🚨 ${s.model_name}</strong>
+                        <span style="font-size:0.8rem;color:var(--muted);margin-left:10px;">${s.cve_id} &middot; ${s.vulnerability}</span>
+                    </div>
+                    <button class="btn btn-outline" style="font-size:0.75rem;padding:4px 10px;" onclick="revokeKillSwitch('${s.model_name}')">
+                        Revoke Kill Switch
+                    </button>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+    } catch (e) { }
+}
+
+async function revokeKillSwitch(modelName) {
+    try {
+        await fetch(`${API_BASE_URL}/v1/vulnerability-check/revoke`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ model: modelName })
+        });
+        showToast(`Kill switch revoked for model '${modelName}'.`, 'success');
+    } catch (e) { }
+    loadKillSwitches();
+}
+
+async function loadAppeals() {
+    const tbody = document.getElementById('appeals-table-body');
+    if (!tbody) return;
+
+    try {
+        const res = await fetch(`${API_BASE_URL}/v1/incidents/appeals`);
+        if (res.ok) {
+            const data = await res.json();
+            const appeals = data.appeals || [];
+
+            if (appeals.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted" style="padding:20px;">No pending employee appeals in queue.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = appeals.map(a => `
+                <tr>
+                    <td><strong>${a.employee_name}</strong></td>
+                    <td><span style="font-family:var(--mono);color:#00f0ff;">${a.ip}</span></td>
+                    <td><em>${a.tool_or_model}</em></td>
+                    <td style="font-size:0.82rem;max-width:260px;">${a.justification}</td>
+                    <td><span class="badge ${a.status === 'approved' ? 'badge-success' : (a.status === 'denied' ? 'badge-danger' : 'badge-warning')}">${a.status}</span></td>
+                    <td class="text-center">
+                        ${a.status === 'pending_review' ? `
+                            <button class="btn btn-outline" style="font-size:0.75rem;padding:4px 8px;margin-right:4px;" onclick="actionAppeal('${a.id}', 'approved')">Approve</button>
+                            <button class="btn btn-danger" style="font-size:0.75rem;padding:4px 8px;" onclick="actionAppeal('${a.id}', 'denied')">Deny</button>
+                        ` : '<span class="text-muted" style="font-size:0.8rem;">Reviewed</span>'}
+                    </td>
+                </tr>
+            `).join('');
+            lucide.createIcons();
+        }
+    } catch (e) { }
+}
+
+async function actionAppeal(appealId, action) {
+    try {
+        await fetch(`${API_BASE_URL}/v1/incidents/appeals/action`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ appeal_id: appealId, action: action })
+        });
+        showToast(`Appeal ${appealId} marked as '${action.toUpperCase()}'.`, action === 'approved' ? 'success' : 'danger');
+    } catch (e) { }
+    loadAppeals();
 }
 
 function applyCustomIpAction(action) {

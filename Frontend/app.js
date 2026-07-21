@@ -352,6 +352,64 @@ function bindEvents() {
     if (btnCloseAgent) btnCloseAgent.addEventListener('click', closeAgentModal);
     if (btnCancelAgent) btnCancelAgent.addEventListener('click', closeAgentModal);
     if (btnRunScan) btnRunScan.addEventListener('click', runAgentPreUploadScan);
+
+    // ── Appeal Redressal Modal Listeners ──
+    const btnCloseAppeal = $('btn-close-appeal-modal');
+    const btnCancelAppeal = $('btn-cancel-appeal');
+    const btnSubmitAppeal = $('btn-submit-appeal');
+    if (btnCloseAppeal) btnCloseAppeal.addEventListener('click', closeAppealModal);
+    if (btnCancelAppeal) btnCancelAppeal.addEventListener('click', closeAppealModal);
+    if (btnSubmitAppeal) btnSubmitAppeal.addEventListener('click', submitAppeal);
+}
+
+function openAppealModal(toolName = 'Unapproved AI Tool', explanation = '') {
+    const aModal = $('appeal-modal');
+    const toolInput = $('appeal-tool-name');
+    const expText = $('appeal-plain-explanation');
+    if (toolInput) toolInput.value = toolName;
+    if (expText && explanation) expText.innerText = explanation;
+    if (aModal) {
+        aModal.classList.remove('hidden');
+        lucide.createIcons();
+    }
+}
+
+function closeAppealModal() {
+    const aModal = $('appeal-modal');
+    if (aModal) aModal.classList.add('hidden');
+}
+
+async function submitAppeal() {
+    const empName = $('appeal-emp-name') ? $('appeal-emp-name').value.trim() : 'Worker';
+    const toolName = $('appeal-tool-name') ? $('appeal-tool-name').value : 'AI Tool';
+    const justification = $('appeal-justification') ? $('appeal-justification').value.trim() : '';
+
+    if (!justification) {
+        alert('Please enter a business justification for your appeal.');
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/v1/incidents/appeal`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                employee_name: empName,
+                ip: MY_TEST_IP || '183.171.x.x',
+                tool_or_model: toolName,
+                justification: justification
+            })
+        });
+
+        if (response.ok) {
+            addLog(`Redressal Appeal submitted for ${toolName} by ${empName}. Sent to Security Team queue.`, "system");
+        }
+    } catch (e) {
+        addLog(`Appeal recorded locally for ${toolName}.`, "system");
+    }
+
+    closeAppealModal();
+    if ($('appeal-justification')) $('appeal-justification').value = '';
 }
 
 // ─────────────────────────────────────────────────────────────────────
@@ -389,7 +447,59 @@ function bindTooltip() {
 // ─────────────────────────────────────────────────────────────────────
 // CHART
 // ─────────────────────────────────────────────────────────────────────
+let surgeChartInstance = null;
+
+function initSurgeChart() {
+    const surgeCtx = document.getElementById('surgeChart');
+    if (!surgeCtx) return;
+
+    fetch(`${API_BASE_URL}/v1/dashboard/governance-analytics`)
+        .then(res => res.json())
+        .then(data => {
+            const surgeData = data.analytics?.shadow_ai_interceptions || [3, 5, 8, 24, 42, 68, 85];
+            const labels = data.analytics?.surge_labels || ['6 Days Ago', '5 Days Ago', '4 Days Ago', '3 Days Ago', '2 Days Ago', 'Yesterday', 'Today'];
+
+            if (surgeChartInstance) surgeChartInstance.destroy();
+
+            surgeChartInstance = new Chart(surgeCtx.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Shadow AI Interceptions',
+                        data: surgeData,
+                        borderColor: '#ff3366',
+                        backgroundColor: 'rgba(255, 51, 102, 0.15)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: '#ff3366',
+                        pointRadius: 5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => ` ${ctx.raw} Interceptions Blocked`
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#9ca3af', font: { family: 'Outfit', size: 10 } } },
+                        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#9ca3af', font: { family: 'Outfit', size: 10 } } }
+                    }
+                }
+            });
+        })
+        .catch(() => {});
+}
+
 function initChart() {
+    initSurgeChart();
     const ctx = document.getElementById('departmentChart').getContext('2d');
 
     chart = new Chart(ctx, {
