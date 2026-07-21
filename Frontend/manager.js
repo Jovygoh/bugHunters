@@ -1,7 +1,7 @@
 // AegisAI — Manager AI Approval & IP Enforcement Logic
 
 const API_BASE_URL = (window.BUGHUNTERS_API_URL || (
-    window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:' || !window.location.hostname
         ? 'http://127.0.0.1:8000/api'
         : 'https://bughunters-h0w4.onrender.com/api'
 )).replace(/\/$/, '');

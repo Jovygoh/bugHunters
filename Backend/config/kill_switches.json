@@ -1,0 +1,15 @@
+{
+    "kill_switches": [],
+    "appeals": [
+        {
+            "id": "appeal-1784625858-489",
+            "employee_name": "Evan Employee",
+            "ip": "183.171.12.34",
+            "tool_or_model": "Phind.com",
+            "blocked_reason": "DLP Policy Violation",
+            "justification": "Need access for legacy C++ refactoring project",
+            "status": "pending_review",
+            "submitted_at": "21 Jul 2026, 09:24"
+        }
+    ]
+}
