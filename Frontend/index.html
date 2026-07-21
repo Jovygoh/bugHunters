@@ -156,6 +156,20 @@
                 <!-- Left: Department Chart + Inspector -->
                 <div class="grid-col left-col">
 
+                    <!-- 7-Day Shadow AI Interception Surge Chart -->
+                    <div class="glass-card chart-card" style="margin-bottom:20px;">
+                        <div class="card-header">
+                            <div class="card-header-title">
+                                <i data-lucide="trending-up" class="text-danger"></i>
+                                <h2>7-Day Shadow AI Interception Surge</h2>
+                            </div>
+                            <span class="badge badge-danger">Surge Spike Detected</span>
+                        </div>
+                        <div class="chart-container" style="height:200px;">
+                            <canvas id="surgeChart"></canvas>
+                        </div>
+                    </div>
+
                     <div class="glass-card chart-card">
                         <div class="card-header">
                             <div class="card-header-title">
@@ -477,6 +491,47 @@
                 <button class="btn btn-primary" id="btn-run-agent-scan" style="background:linear-gradient(135deg,#00f0ff,#3b82f6);color:#06090e;font-weight:700;">
                     <i data-lucide="scan"></i>
                     <span>Execute Pre-Upload Inspection</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Redressal Appeal Modal (Task 4) -->
+    <div class="modal-overlay hidden" id="appeal-modal">
+        <div class="modal-card" style="max-width:540px;">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <i data-lucide="scale" class="text-primary"></i>
+                    <h2>Redressal Pathway — Submit Security Appeal</h2>
+                </div>
+                <button class="btn-close-modal" id="btn-close-appeal-modal"><i data-lucide="x"></i></button>
+            </div>
+            <div class="modal-body" style="gap:14px;">
+                <div class="policy-note" style="background:rgba(239,68,68,0.08);border-color:rgba(239,68,68,0.25);">
+                    <strong style="color:#ef4444;">Plain Explanation of Interception:</strong>
+                    <p id="appeal-plain-explanation" style="font-size:0.82rem;color:var(--muted);margin-top:4px;">
+                        Your upload attempt was intercepted because the target tool is an unapproved Shadow AI service or contained sensitive PII matching NIST AI governance rules.
+                    </p>
+                </div>
+
+                <div class="modal-detail-item">
+                    <label>Employee Name</label>
+                    <input type="text" id="appeal-emp-name" placeholder="Your Name..." style="background:#06090e;border:1px solid var(--border);padding:8px 12px;border-radius:6px;color:#fff;font-size:0.85rem;">
+                </div>
+                <div class="modal-detail-item">
+                    <label>Blocked AI Tool / Model</label>
+                    <input type="text" id="appeal-tool-name" readonly style="background:#06090e;border:1px solid var(--border);padding:8px 12px;border-radius:6px;color:#00f0ff;font-family:var(--mono);font-size:0.85rem;">
+                </div>
+                <div class="modal-detail-item">
+                    <label>Business Justification / Reason for Exception</label>
+                    <textarea id="appeal-justification" rows="3" placeholder="Provide details on why access is required for your legitimate business workflow..." style="background:#06090e;border:1px solid var(--border);padding:8px 12px;border-radius:6px;color:#fff;font-size:0.85rem;resize:vertical;"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" id="btn-cancel-appeal">Cancel</button>
+                <button class="btn btn-primary" id="btn-submit-appeal" style="background:linear-gradient(135deg,#00f0ff,#3b82f6);color:#06090e;font-weight:700;">
+                    <i data-lucide="send"></i>
+                    <span>Submit Appeal to Security Team</span>
                 </button>
             </div>
         </div>
